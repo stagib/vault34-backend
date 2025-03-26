@@ -18,5 +18,4 @@ class PostResponse(BaseModel):
     rating: str
     tags: str
     source: str
-    status: str
     score: int

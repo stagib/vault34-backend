@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, func
+from pgvector.sqlalchemy import Vector
 
 from app.database import Base
 
@@ -24,9 +25,9 @@ class Post(Base):
     rating = Column(String)
     tags = Column(String)
     source = Column(String)
-    status = Column(String)
     score = Column(Integer)
 
+    embedding = Column(Vector(512))
     """ views = Column(Integer)
     view_time = Column(Integer)
     saves = Column(Integer)
