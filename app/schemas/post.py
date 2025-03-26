@@ -5,6 +5,7 @@ from datetime import datetime
 class PostBase(BaseModel):
     id: int
     sample_url: str
+    preview_url: str
 
 
 class PostResponse(BaseModel):
