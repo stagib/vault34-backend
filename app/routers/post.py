@@ -2,6 +2,7 @@ import requests
 from fastapi import APIRouter, Query, Depends, HTTPException
 from fastapi_pagination import Page, paginate as paginate_t
 from fastapi_pagination.ext.sqlalchemy import paginate
+from fastapi_pagination.utils import disable_installed_extensions_check
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 import numpy
@@ -79,9 +80,10 @@ def get_post_recommendation(post_id: int, db: Session = Depends(get_db)):
     post = db.query(Post).filter(Post.id == post_id).first()
     vector = numpy.array(post.embedding).tolist()
     results = db.scalars(
-        select(Post).filter(
-            Post.embedding != vector, Post.embedding.cosine_distance(vector) < 0.2
-        )
+        select(Post)
+        .order_by(Post.embedding.cosine_distance(vector))
+        .filter(Post.embedding != vector, Post.embedding.cosine_distance(vector) < 0.2)
     ).all()
+    disable_installed_extensions_check()
     paginated_posts = paginate_t(results)
     return paginated_posts
