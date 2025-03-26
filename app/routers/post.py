@@ -1,6 +1,6 @@
 import requests
 from fastapi import APIRouter, Query, Depends, HTTPException
-from fastapi_pagination import Page
+from fastapi_pagination import Page, paginate as paginate_t
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
@@ -74,7 +74,7 @@ def get_post(post_id: int, db: Session = Depends(get_db)):
     return post
 
 
-@router.get("/posts/{post_id}/recommend", response_model=list[PostBase])
+@router.get("/posts/{post_id}/recommend", response_model=Page[PostBase])
 def get_post_recommendation(post_id: int, db: Session = Depends(get_db)):
     post = db.query(Post).filter(Post.id == post_id).first()
     vector = numpy.array(post.embedding).tolist()
@@ -82,5 +82,6 @@ def get_post_recommendation(post_id: int, db: Session = Depends(get_db)):
         select(Post).filter(
             Post.embedding != vector, Post.embedding.cosine_distance(vector) < 0.2
         )
-    )
-    return results
+    ).all()
+    paginated_posts = paginate_t(results)
+    return paginated_posts
