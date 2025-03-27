@@ -9,9 +9,10 @@ import numpy
 
 from app.config import settings
 from app.database import get_db
-from app.models import Post
-from app.schemas import PostBase, PostResponse
-from app.utils import fetch_all_images, get_image_vector
+from app.models import Post, Reaction
+from app.schemas import PostBase, PostResponse, ReactionResponse, ReactionBase
+from app.utils import fetch_all_images, get_image_vector, get_current_user
+from app.types import ReactionType
 
 
 router = APIRouter(tags=["Post"])
@@ -87,3 +88,35 @@ def get_post_recommendation(post_id: int, db: Session = Depends(get_db)):
     disable_installed_extensions_check()
     paginated_posts = paginate_t(results)
     return paginated_posts
+
+
+@router.post("/posts/{post_id}/reactions", response_model=ReactionResponse)
+def react_to_post(
+    reaction: ReactionBase,
+    post_id: int,
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    db_reaction = (
+        db.query(Reaction)
+        .filter(Reaction.post_id == post_id, Reaction.user_id == user.id)
+        .first()
+    )
+
+    if db_reaction:
+        db_reaction.type = reaction.type
+        db.commit()
+    else:
+        db_reaction = Reaction(user_id=user.id, post_id=post_id, type=reaction.type)
+        db.add(db_reaction)
+        db.commit()
+
+    return {
+        "type": db_reaction.type,
+        "likes": post.likes,
+        "dislikes": post.dislikes,
+    }

@@ -20,3 +20,5 @@ class PostResponse(BaseModel):
     tags: str
     source: str
     score: int
+    likes: int
+    dislikes: int

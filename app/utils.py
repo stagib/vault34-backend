@@ -2,11 +2,22 @@ import asyncio
 import aiohttp
 import torch
 import clip
+import jwt
+from datetime import datetime, timezone, timedelta
+from argon2 import PasswordHasher
+from typing import Annotated
 from PIL import Image
+from fastapi import HTTPException, Depends, Cookie
+from sqlalchemy.orm import Session
 from io import BytesIO
+
+from app.database import get_db
+from app.models import User
+from app.config import settings
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/32", device=device)
+ph = PasswordHasher()
 
 
 async def fetch_image(session, post):
@@ -43,3 +54,50 @@ def get_image_vector(image):
             return vector
     except Exception as e:
         return None
+
+
+def hash_password(password: str):
+    return ph.hash(password)
+
+
+def verify_password(hashed_password: str, plain_password: str):
+    try:
+        ph.verify(hashed_password, plain_password)
+        return True
+    except Exception:
+        return False
+
+
+def create_token(id):
+    token = jwt.encode(
+        {
+            "id": id,
+            "exp": datetime.now(timezone.utc) + timedelta(hours=12),
+        },
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM,
+    )
+    return token
+
+
+def get_current_user(
+    auth_token: Annotated[str | None, Cookie()] = None,
+    db: Session = Depends(get_db),
+):
+    if not auth_token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    try:
+        payload = jwt.decode(
+            auth_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+        )
+        user_id = payload.get("id")
+        if not user_id or user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user or user is None:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
