@@ -39,7 +39,7 @@ class Post(Base):
     reactions = Column(Integer) """
 
     reactions = relationship("Reaction", back_populates="post", lazy="dynamic")
-    comments = relationship("Comment", back_populates="post")
+    comments = relationship("Comment", back_populates="post", lazy="dynamic")
 
     @property
     def likes(self) -> int:
@@ -59,7 +59,15 @@ class Comment(Base):
     content = Column(String, nullable=False)
     post = relationship("Post", back_populates="comments")
     user = relationship("User", back_populates="comments")
-    reactions = relationship("Reaction", back_populates="comment")
+    reactions = relationship("Reaction", back_populates="comment", lazy="dynamic")
+
+    @property
+    def likes(self) -> int:
+        return self.reactions.filter(Reaction.type == ReactionType.LIKE).count()
+
+    @property
+    def dislikes(self) -> int:
+        return self.reactions.filter(Reaction.type == ReactionType.DISLIKE).count()
 
 
 class Reaction(Base):

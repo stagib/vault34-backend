@@ -5,13 +5,14 @@ from fastapi_pagination import add_pagination
 from app.config import settings
 from app.database import engine
 from app.models import Base
-from app.routers import post, user, auth
+from app.routers import post, user, auth, comment
 
 
 app = FastAPI()
 app.include_router(post.router)
 app.include_router(user.router)
 app.include_router(auth.router)
+app.include_router(comment.router)
 
 app.add_middleware(
     CORSMiddleware,

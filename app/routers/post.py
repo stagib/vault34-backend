@@ -10,7 +10,7 @@ import numpy
 from app.config import settings
 from app.database import get_db
 from app.models import Post, Reaction
-from app.schemas import PostBase, PostResponse, ReactionResponse, ReactionBase
+from app.schemas import PostBase, PostResponse, ReactionBase
 from app.utils import fetch_all_images, get_image_vector, get_user
 
 
@@ -97,14 +97,14 @@ def get_post_recommendation(post_id: int, db: Session = Depends(get_db)):
     return paginated_posts
 
 
-@router.post("/posts/{post_id}/reactions", response_model=ReactionResponse)
+@router.post("/posts/{post_id}/reactions")
 def react_to_post(
     reaction: ReactionBase,
     post_id: int,
     user: dict = Depends(get_user),
     db: Session = Depends(get_db),
 ):
-    if not user or user is None:
+    if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     post = db.query(Post).filter(Post.id == post_id).first()
@@ -121,12 +121,12 @@ def react_to_post(
         db_reaction.type = reaction.type
         db.commit()
     else:
-        db_reaction = Reaction(user_id=user.id, post_id=post_id, type=reaction.type)
-        db.add(db_reaction)
+        new_reaction = Reaction(user_id=user.id, post_id=post_id, type=reaction.type)
+        db.add(new_reaction)
         db.commit()
 
     return {
-        "type": db_reaction.type,
+        "type": reaction.type,
         "likes": post.likes,
         "dislikes": post.dislikes,
     }

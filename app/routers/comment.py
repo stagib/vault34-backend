@@ -1,0 +1,109 @@
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlalchemy import paginate
+from sqlalchemy import desc
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.models import Comment, Post, Reaction
+from app.schemas import CommentResponse, CommentCreate, ReactionBase
+from app.utils import get_user
+from app.types import ReactionType
+
+
+router = APIRouter(tags=["Comment"])
+
+
+@router.get("/posts/{post_id}/comments", response_model=Page[CommentResponse])
+def get_comments(
+    post_id: int,
+    user: dict = Depends(get_user),
+    db: Session = Depends(get_db),
+):
+    db_post = db.query(Post).filter(Post.id == post_id).first()
+    if not db_post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    paginated_comments = paginate(db_post.comments.order_by(desc(Comment.date_created)))
+
+    if user:
+        comment_ids = [comment.id for comment in paginated_comments.items]
+        reactions = (
+            db.query(Reaction)
+            .filter(
+                Reaction.comment_id.in_(comment_ids),
+                Reaction.user_id == user.id,
+            )
+            .all()
+        )
+
+        reactions_map = {reaction.comment_id: reaction.type for reaction in reactions}
+        for comment in paginated_comments.items:
+            comment.user_reaction = ReactionType.NONE
+            if reactions_map.get(comment.id):
+                comment.user_reaction = reactions_map.get(comment.id)
+
+    return paginated_comments
+
+
+@router.post("/posts/{post_id}/comments", response_model=CommentResponse)
+def create_comment(
+    post_id: int,
+    comment: CommentCreate,
+    user: dict = Depends(get_user),
+    db: Session = Depends(get_db),
+):
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    new_comment = Comment(user_id=user.id, post_id=post.id, content=comment.content)
+    db.add(new_comment)
+    db.commit()
+    db.refresh(new_comment)
+    return new_comment
+
+
+@router.post("/posts/{post_id}/comments/{comment_id}/reactions")
+def react_to_comment(
+    post_id: int,
+    comment_id: int,
+    reaction: ReactionBase,
+    user: dict = Depends(get_user),
+    db: Session = Depends(get_db),
+):
+    comment = (
+        db.query(Comment)
+        .filter(Comment.post_id == post_id, Comment.id == comment_id)
+        .first()
+    )
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+
+    db_reaction = (
+        db.query(Reaction)
+        .filter(
+            Reaction.comment_id == comment.id,
+            Reaction.user_id == user.id,
+        )
+        .first()
+    )
+
+    if db_reaction:
+        db_reaction.type = reaction.type
+        db.commit()
+    else:
+        new_reaction = Reaction(
+            user_id=user.id, comment_id=comment_id, type=reaction.type
+        )
+        db.add(new_reaction)
+        db.commit()
+
+    return {
+        "type": reaction.type,
+        "likes": comment.likes,
+        "dislikes": comment.dislikes,
+    }
