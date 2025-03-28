@@ -67,6 +67,32 @@ def create_comment(
     return new_comment
 
 
+@router.delete("/posts/{post_id}/comments/{comment_id}")
+def delete_comment(
+    post_id: int,
+    comment_id: int,
+    user: dict = Depends(get_user),
+    db: Session = Depends(get_db),
+):
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    comment = (
+        db.query(Comment)
+        .filter(
+            Comment.id == comment_id,
+            Comment.post_id == post_id,
+            Comment.user_id == user.id,
+        )
+        .first()
+    )
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    db.delete(comment)
+    db.commit()
+    return {"detail": "Removed comment"}
+
+
 @router.post("/posts/{post_id}/comments/{comment_id}/reactions")
 def react_to_comment(
     post_id: int,
