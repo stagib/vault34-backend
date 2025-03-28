@@ -11,8 +11,7 @@ from app.config import settings
 from app.database import get_db
 from app.models import Post, Reaction
 from app.schemas import PostBase, PostResponse, ReactionResponse, ReactionBase
-from app.utils import fetch_all_images, get_image_vector, get_current_user
-from app.types import ReactionType
+from app.utils import fetch_all_images, get_image_vector, get_user
 
 
 router = APIRouter(tags=["Post"])
@@ -69,10 +68,18 @@ def get_recommendation(db: Session = Depends(get_db)):
 
 
 @router.get("/posts/{post_id}", response_model=PostResponse)
-def get_post(post_id: int, db: Session = Depends(get_db)):
+def get_post(
+    post_id: int, user: dict = Depends(get_user), db: Session = Depends(get_db)
+):
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
+
+    if user:
+        user_reaction = post.reactions.filter(Reaction.user_id == user.id).first()
+        if user_reaction:
+            post.user_reaction = user_reaction.type
+
     return post
 
 
@@ -94,9 +101,12 @@ def get_post_recommendation(post_id: int, db: Session = Depends(get_db)):
 def react_to_post(
     reaction: ReactionBase,
     post_id: int,
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(get_user),
     db: Session = Depends(get_db),
 ):
+    if not user or user is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")

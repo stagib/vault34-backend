@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 from datetime import datetime
 
+from app.types import ReactionType
+
 
 class PostBase(BaseModel):
     id: int
@@ -22,3 +24,4 @@ class PostResponse(BaseModel):
     score: int
     likes: int
     dislikes: int
+    user_reaction: ReactionType = ReactionType.NONE

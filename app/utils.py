@@ -7,7 +7,7 @@ from datetime import datetime, timezone, timedelta
 from argon2 import PasswordHasher
 from typing import Annotated
 from PIL import Image
-from fastapi import HTTPException, Depends, Cookie
+from fastapi import Depends, Cookie
 from sqlalchemy.orm import Session
 from io import BytesIO
 
@@ -80,24 +80,23 @@ def create_token(id):
     return token
 
 
-def get_current_user(
+def get_user(
     auth_token: Annotated[str | None, Cookie()] = None,
     db: Session = Depends(get_db),
 ):
     if not auth_token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
+        return None
     try:
         payload = jwt.decode(
             auth_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
         user_id = payload.get("id")
         if not user_id or user_id is None:
-            raise HTTPException(status_code=401, detail="Invalid token")
+            return None
 
         user = db.query(User).filter(User.id == user_id).first()
         if not user or user is None:
-            raise HTTPException(status_code=401, detail="User not found")
+            return None
         return user
     except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        return None
