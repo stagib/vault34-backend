@@ -20,5 +20,6 @@ class VaultResponse(BaseModel):
     date_created: datetime
     title: str
     privacy: PrivacyType
+    post_count: int
     user: UserBase
     previews: str

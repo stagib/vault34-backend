@@ -69,6 +69,7 @@ class Vault(Base):
     title = Column(String, nullable=False)
     privacy = Column(Enum(PrivacyType), nullable=False, default=PrivacyType.PRIVATE)
     previews = Column(String, default="")
+    post_count = Column(Integer, default=0)
     user = relationship("User", back_populates="vaults")
 
 

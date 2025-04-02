@@ -141,6 +141,7 @@ def add_post_to_vault(
     if len(previews) > 3:
         previews.pop(0)
 
+    vault.post_count += 1
     vault.previews = " ".join(previews)
     new_entry = VaultPost(vault_id=vault.id, post_id=post.id)
     db.add(new_entry)
@@ -168,6 +169,7 @@ def remove_post_from_vault(
     if not post_entry:
         raise HTTPException(status_code=404, detail="Entry not found")
 
+    vault.post_count -= 1
     db.delete(post_entry)
     db.commit()
     return {"detail": "Removed entry from vault"}
