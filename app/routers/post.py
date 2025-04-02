@@ -12,6 +12,7 @@ from app.database import get_db
 from app.models import Post, Reaction
 from app.schemas import PostBase, PostResponse, ReactionBase
 from app.utils import fetch_all_images, get_image_vector, get_user
+from app.types import ReactionType
 
 
 router = APIRouter(tags=["Post"])
@@ -19,7 +20,7 @@ router = APIRouter(tags=["Post"])
 
 @router.get("/posts", response_model=Page[PostBase])
 async def get_posts(tags: str = Query(None), db: Session = Depends(get_db)):
-    params = {"limit": 1000, "json": 1}
+    params = {"limit": 50, "json": 1}
     if tags:
         params["tags"] = tags
 
@@ -97,6 +98,36 @@ def get_post_recommendation(post_id: int, db: Session = Depends(get_db)):
     return paginated_posts
 
 
+def add_reaction(
+    db_reaction: Reaction, reaction: Reaction, post: Post, user: dict, db: Session
+):
+    if db_reaction:
+        if db_reaction.type == reaction.type:
+            return
+
+        if db_reaction.type == ReactionType.LIKE:
+            post.likes -= 1
+        elif db_reaction.type == ReactionType.DISLIKE:
+            post.dislikes -= 1
+
+        if reaction.type == ReactionType.LIKE:
+            post.likes += 1
+        elif reaction.type == ReactionType.DISLIKE:
+            post.dislikes += 1
+
+        db_reaction.type = reaction.type
+        db.commit()
+    else:
+        if reaction.type == ReactionType.LIKE:
+            post.likes += 1
+        elif reaction.type == ReactionType.DISLIKE:
+            post.dislikes += 1
+
+        new_reaction = Reaction(user_id=user.id, post_id=post.id, type=reaction.type)
+        db.add(new_reaction)
+        db.commit()
+
+
 @router.post("/posts/{post_id}/reactions")
 def react_to_post(
     reaction: ReactionBase,
@@ -117,14 +148,7 @@ def react_to_post(
         .first()
     )
 
-    if db_reaction:
-        db_reaction.type = reaction.type
-        db.commit()
-    else:
-        new_reaction = Reaction(user_id=user.id, post_id=post_id, type=reaction.type)
-        db.add(new_reaction)
-        db.commit()
-
+    add_reaction(db_reaction, reaction, post, user, db)
     return {
         "type": reaction.type,
         "likes": post.likes,

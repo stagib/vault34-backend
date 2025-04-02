@@ -44,6 +44,8 @@ class Post(Base):
     score = Column(Integer)
 
     embedding = Column(Vector(512))
+    likes = Column(Integer, default=0)
+    dislikes = Column(Integer, default=0)
     """ views = Column(Integer)
     view_time = Column(Integer)
     saves = Column(Integer)
@@ -51,14 +53,6 @@ class Post(Base):
 
     reactions = relationship("Reaction", back_populates="post", lazy="dynamic")
     comments = relationship("Comment", back_populates="post", lazy="dynamic")
-
-    @property
-    def likes(self) -> int:
-        return self.reactions.filter(Reaction.type == ReactionType.LIKE).count()
-
-    @property
-    def dislikes(self) -> int:
-        return self.reactions.filter(Reaction.type == ReactionType.DISLIKE).count()
 
 
 class Vault(Base):
