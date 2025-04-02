@@ -1,7 +1,13 @@
 from pydantic import BaseModel, Field
+from datetime import datetime
 
 from app.types import PrivacyType
 from app.schemas import UserBase, PostBase
+
+
+class VaultPostBase(BaseModel):
+    id: int
+    post: PostBase
 
 
 class VaultBase(BaseModel):
@@ -11,11 +17,8 @@ class VaultBase(BaseModel):
 
 class VaultResponse(BaseModel):
     id: int
+    date_created: datetime
     title: str
     privacy: PrivacyType
     user: UserBase
-
-
-class VaultPostBase(BaseModel):
-    id: int
-    post: PostBase
+    previews: str

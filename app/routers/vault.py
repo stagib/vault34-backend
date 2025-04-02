@@ -134,6 +134,14 @@ def add_post_to_vault(
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
+    previews = vault.previews.split()
+    if post.preview_url in previews:
+        previews.remove(post.preview_url)
+    previews.append(post.preview_url)
+    if len(previews) > 3:
+        previews.pop(0)
+
+    vault.previews = " ".join(previews)
     new_entry = VaultPost(vault_id=vault.id, post_id=post.id)
     db.add(new_entry)
     db.commit()

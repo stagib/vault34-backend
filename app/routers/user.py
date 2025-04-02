@@ -1,10 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlalchemy import paginate
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User
-from app.schemas import UserCreate
-from app.utils import hash_password, create_token, verify_password
+from app.models import User, Vault
+from app.schemas import UserCreate, UserResponse, VaultResponse
+from app.utils import hash_password, create_token, verify_password, get_user
+from app.types import PrivacyType
 
 
 router = APIRouter(tags=["User"])
@@ -46,3 +50,30 @@ def login(response: Response, user: UserCreate, db: Session = Depends(get_db)):
 def logout(response: Response):
     response.delete_cookie("auth_token")
     return {"detail": "Logged out"}
+
+
+@router.get("/users/{user_id}", response_model=UserResponse)
+def get_current_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+@router.get("/users/{user_id}/vaults", response_model=Page[VaultResponse])
+def get_user_vaults(
+    user_id: int, user: dict = Depends(get_user), db: Session = Depends(get_db)
+):
+    query_user = db.query(User).filter(User.id == user_id).first()
+    if not query_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user:
+        vaults = query_user.vaults.order_by(desc(Vault.date_created))
+    else:
+        vaults = query_user.vaults.order_by(desc(Vault.date_created)).filter(
+            Vault.privacy == PrivacyType.PUBLIC
+        )
+
+    paginated_vaults = paginate(vaults)
+    return paginated_vaults
