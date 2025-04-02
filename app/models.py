@@ -73,14 +73,8 @@ class Comment(Base):
     post = relationship("Post", back_populates="comments")
     user = relationship("User", back_populates="comments")
     reactions = relationship("Reaction", back_populates="comment", lazy="dynamic")
-
-    @property
-    def likes(self) -> int:
-        return self.reactions.filter(Reaction.type == ReactionType.LIKE).count()
-
-    @property
-    def dislikes(self) -> int:
-        return self.reactions.filter(Reaction.type == ReactionType.DISLIKE).count()
+    likes = Column(Integer, default=0)
+    dislikes = Column(Integer, default=0)
 
 
 class Reaction(Base):

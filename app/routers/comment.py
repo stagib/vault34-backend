@@ -93,6 +93,38 @@ def delete_comment(
     return {"detail": "Removed comment"}
 
 
+def add_reaction(
+    db_reaction: Reaction, reaction: Reaction, comment: Comment, user: dict, db: Session
+):
+    if db_reaction:
+        if db_reaction.type == reaction.type:
+            return
+
+        if db_reaction.type == ReactionType.LIKE:
+            comment.likes -= 1
+        elif db_reaction.type == ReactionType.DISLIKE:
+            comment.dislikes -= 1
+
+        if reaction.type == ReactionType.LIKE:
+            comment.likes += 1
+        elif reaction.type == ReactionType.DISLIKE:
+            comment.dislikes += 1
+
+        db_reaction.type = reaction.type
+        db.commit()
+    else:
+        if reaction.type == ReactionType.LIKE:
+            comment.likes += 1
+        elif reaction.type == ReactionType.DISLIKE:
+            comment.dislikes += 1
+
+        new_reaction = Reaction(
+            user_id=user.id, comment_id=comment.id, type=reaction.type
+        )
+        db.add(new_reaction)
+        db.commit()
+
+
 @router.post("/posts/{post_id}/comments/{comment_id}/reactions")
 def react_to_comment(
     post_id: int,
@@ -118,16 +150,7 @@ def react_to_comment(
         .first()
     )
 
-    if db_reaction:
-        db_reaction.type = reaction.type
-        db.commit()
-    else:
-        new_reaction = Reaction(
-            user_id=user.id, comment_id=comment_id, type=reaction.type
-        )
-        db.add(new_reaction)
-        db.commit()
-
+    add_reaction(db_reaction, reaction, comment, user, db)
     return {
         "type": reaction.type,
         "likes": comment.likes,
