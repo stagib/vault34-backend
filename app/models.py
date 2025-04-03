@@ -24,7 +24,7 @@ class VaultPost(Base):
     date_created = Column(DateTime, default=func.now())
     vault_id = Column(Integer, ForeignKey("vaults.id"), nullable=False)
     post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
-    vault = relationship("Vault", backref="vault_post")
+    vault = relationship("Vault", back_populates="vault_posts")
     post = relationship("Post", backref="vault_post")
 
 
@@ -61,6 +61,9 @@ class Vault(Base):
     previews = Column(String, default="")
     post_count = Column(Integer, default=0)
     user = relationship("User", back_populates="vaults")
+    vault_posts = relationship(
+        "VaultPost", back_populates="vault", cascade="all, delete-orphan"
+    )
 
 
 class Comment(Base):

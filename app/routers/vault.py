@@ -60,17 +60,17 @@ def update_vault(
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    vault = (
+    db_vault = (
         db.query(Vault).filter(Vault.id == vault_id, Vault.user_id == user.id).first()
     )
-    if not vault:
+    if not db_vault:
         raise HTTPException(status_code=404, detail="Vault not found")
 
-    for key, value in vault.model_dump(exclude_unset=True).items():
-        setattr(vault, key, value)
+    db_vault.title = vault.title
+    db_vault.privacy = vault.privacy
 
     db.commit()
-    return vault
+    return db_vault
 
 
 @router.delete("/vaults/{vault_id}")
