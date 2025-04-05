@@ -68,7 +68,7 @@ def get_user_vaults(
     if not query_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user.id == query_user.id:
+    if user and user.id == query_user.id:
         vaults = query_user.vaults.order_by(desc(Vault.date_created))
     else:
         vaults = query_user.vaults.order_by(desc(Vault.date_created)).filter(

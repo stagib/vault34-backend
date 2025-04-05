@@ -45,8 +45,9 @@ def get_vault(
     if not vault:
         raise HTTPException(status_code=404, detail="Vault not found")
 
-    if vault.privacy == PrivacyType.PRIVATE and not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+    if vault.privacy == PrivacyType.PRIVATE:
+        if user and user.id != vault.user_id:
+            raise HTTPException(status_code=401, detail="Not authenticated")
     return vault
 
 
@@ -101,8 +102,9 @@ def get_vault_posts(
     if not vault:
         raise HTTPException(status_code=404, detail="Vault not found")
 
-    if vault.privacy == PrivacyType.PRIVATE and user.id != vault.user_id:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+    if vault.privacy == PrivacyType.PRIVATE:
+        if user and user.id != vault.user_id:
+            raise HTTPException(status_code=401, detail="Not authenticated")
 
     posts = (
         db.query(VaultPost)
