@@ -1,10 +1,9 @@
 import requests
-import datetime
 from fastapi import APIRouter, Query, Depends, HTTPException
 from fastapi_pagination import Page, paginate as paginate_t
 from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi_pagination.utils import disable_installed_extensions_check
-from sqlalchemy import desc, select
+from sqlalchemy import desc, select, and_
 from sqlalchemy.orm import Session
 import numpy
 
@@ -70,8 +69,16 @@ async def get_posts_t(tags: str = Query(None), db: Session = Depends(get_db)):
 
 @router.get("/posts", response_model=Page[PostBase])
 def get_posts(query: str = Query(None), db: Session = Depends(get_db)):
-    posts = db.query(Post)
-    return {}
+    posts = db.query(Post).order_by(desc(Post.post_score))
+    if query:
+        words = query.lower().split()
+        words = [word.strip() for word in words]
+        conditions = [Post.tags.ilike(f"%{word}%") for word in words]
+        posts = posts.filter(and_(*conditions))
+
+    posts = posts.limit(1000)
+    paginated_posts = paginate(posts)
+    return paginated_posts
 
 
 @router.get("/posts/trending", response_model=Page[PostBase])
