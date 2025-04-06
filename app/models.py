@@ -1,5 +1,4 @@
-import datetime
-from sqlalchemy import func, Column, Integer, String, DateTime, ForeignKey, Float
+from sqlalchemy import func, Column, Integer, String, DateTime, ForeignKey, Float, Index
 from sqlalchemy import Enum
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
@@ -55,6 +54,11 @@ class Post(Base):
     saves = Column(Integer, default=0)
     comment_count = Column(Integer, default=0)
     post_score = Column(Float, default=0)
+
+    __table_args__ = (
+        Index("ix_post_score_desc", score.desc()),
+        Index("ix_posts_date_created", "date_created"),
+    )
 
 
 class Vault(Base):

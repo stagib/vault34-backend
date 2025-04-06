@@ -26,7 +26,7 @@ router = APIRouter(tags=["Post"])
 
 
 @router.get("/posts/t", response_model=Page[PostBase])
-async def get_posts(tags: str = Query(None), db: Session = Depends(get_db)):
+async def get_posts_t(tags: str = Query(None), db: Session = Depends(get_db)):
     params = {"limit": 50, "json": 1}
     if tags:
         params["tags"] = tags
@@ -68,27 +68,23 @@ async def get_posts(tags: str = Query(None), db: Session = Depends(get_db)):
     return paginated_posts
 
 
+@router.get("/posts", response_model=Page[PostBase])
+def get_posts(query: str = Query(None), db: Session = Depends(get_db)):
+    posts = db.query(Post)
+    return {}
+
+
 @router.get("/posts/trending", response_model=Page[PostBase])
 def get_trending_posts(db: Session = Depends(get_db)):
-    trend_start = datetime.datetime.now() - datetime.timedelta(days=7)
-    trending = (
-        db.query(Post)
-        .join(Reaction)
-        .filter(Reaction.date_created >= trend_start)
-        .order_by(desc(Post.likes), desc(Post.score))
-        .limit(1000)
-    )
-    paginated_posts = paginate(trending)
+    posts = db.query(Post).order_by(desc(Post.post_score)).limit(1000)
+    paginated_posts = paginate(posts)
+    return paginated_posts
 
-    """ embeddings = get_emeddings(user.history, db)
-    user_profile = numpy.mean(embeddings, axis=0).tolist()
-    results = db.scalars(
-        select(Post)
-        .order_by(Post.embedding.cosine_distance(user_profile) < 0.5)
-        .limit(1000)
-    ).all()
-    disable_installed_extensions_check()
-    paginated_posts = paginate_t(results) """
+
+@router.get("/posts/new", response_model=Page[PostBase])
+def get_new_posts(db: Session = Depends(get_db)):
+    posts = db.query(Post).order_by(desc(Post.date_created)).limit(1000)
+    paginated_posts = paginate(posts)
     return paginated_posts
 
 
@@ -120,7 +116,7 @@ def get_post_recommendation(post_id: int, db: Session = Depends(get_db)):
     vector = numpy.array(post.embedding).tolist()
     results = db.scalars(
         select(Post)
-        .order_by(Post.embedding.cosine_distance(vector))
+        .order_by(Post.embedding.cosine_distance(vector), desc(Post.post_score))
         .filter(Post.embedding != vector, Post.embedding.cosine_distance(vector) < 0.2)
         .limit(1000)
     ).all()
