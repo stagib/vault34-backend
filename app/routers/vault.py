@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Vault, Post, VaultPost
 from app.schemas import VaultBase, VaultResponse, VaultPostBase
-from app.utils import get_user
+from app.utils import get_user, add_item_to_string, calculate_post_score
 from app.types import PrivacyType
 
 
@@ -136,15 +136,10 @@ def add_post_to_vault(
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
-    previews = vault.previews.split()
-    if post.preview_url in previews:
-        previews.remove(post.preview_url)
-    previews.append(post.preview_url)
-    if len(previews) > 3:
-        previews.pop(0)
-
+    post.saves += 1
+    post.post_score = calculate_post_score(post)
     vault.post_count += 1
-    vault.previews = " ".join(previews)
+    vault.previews = add_item_to_string(vault.previews, post.preview_url, limit=3)
     new_entry = VaultPost(vault_id=vault.id, post_id=post.id)
     db.add(new_entry)
     db.commit()
@@ -171,6 +166,7 @@ def remove_post_from_vault(
     if not post_entry:
         raise HTTPException(status_code=404, detail="Entry not found")
 
+    post_entry.post.saves -= 1
     vault.post_count -= 1
     db.delete(post_entry)
     db.commit()

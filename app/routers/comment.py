@@ -60,6 +60,7 @@ def create_comment(
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
+    post.comment_count += 1
     new_comment = Comment(user_id=user.id, post_id=post.id, content=comment.content)
     db.add(new_comment)
     db.commit()
@@ -88,6 +89,8 @@ def delete_comment(
     )
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")
+
+    comment.post.comment_count -= 1
     db.delete(comment)
     db.commit()
     return {"detail": "Removed comment"}

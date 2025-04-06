@@ -1,4 +1,5 @@
-from sqlalchemy import func, Column, Integer, String, DateTime, ForeignKey
+import datetime
+from sqlalchemy import func, Column, Integer, String, DateTime, ForeignKey, Float
 from sqlalchemy import Enum
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
@@ -13,6 +14,7 @@ class User(Base):
     date_created = Column(DateTime, default=func.now(), nullable=False)
     username = Column(String, nullable=False)
     password = Column(String, nullable=False)
+    history = Column(String, nullable=False, default="")
     reactions = relationship("Reaction", back_populates="user", lazy="dynamic")
     comments = relationship("Comment", back_populates="user", lazy="dynamic")
     vaults = relationship("Vault", back_populates="user", lazy="dynamic")
@@ -43,12 +45,16 @@ class Post(Base):
     source = Column(String)
     score = Column(Integer)
 
+    reactions = relationship("Reaction", back_populates="post", lazy="dynamic")
+    comments = relationship("Comment", back_populates="post", lazy="dynamic")
+
     embedding = Column(Vector(512))
     likes = Column(Integer, default=0)
     dislikes = Column(Integer, default=0)
-
-    reactions = relationship("Reaction", back_populates="post", lazy="dynamic")
-    comments = relationship("Comment", back_populates="post", lazy="dynamic")
+    views = Column(Integer, default=0)
+    saves = Column(Integer, default=0)
+    comment_count = Column(Integer, default=0)
+    post_score = Column(Float, default=0)
 
 
 class Vault(Base):
