@@ -19,8 +19,8 @@ router = APIRouter(tags=["Post"])
 @router.get("/posts", response_model=Page[PostBase])
 def get_posts(
     query: str = Query(None),
-    rating: RatingType = Query(),
-    order: OrderType = Query(),
+    rating: RatingType = Query(RatingType.EXPLICIT),
+    order: OrderType = Query(OrderType.TRENDING),
     db: Session = Depends(get_db),
 ):
     posts = db.query(Post).order_by(desc(Post.post_score))
@@ -74,7 +74,6 @@ def get_post(
         user.history = add_item_to_string(user.history, str(post_id))
         db.commit()
 
-    post.views += 1
     post.post_score = calculate_post_score(post)
     db.commit()
     return post

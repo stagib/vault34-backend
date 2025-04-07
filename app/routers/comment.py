@@ -43,6 +43,8 @@ def get_comments(
             if reactions_map.get(comment.id):
                 comment.user_reaction = reactions_map.get(comment.id)
 
+    db_post.views += 1
+    db.commit()
     return paginated_comments
 
 
