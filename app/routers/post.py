@@ -58,20 +58,6 @@ def get_posts(
     return paginated_posts
 
 
-@router.get("/posts/trending", response_model=Page[PostBase])
-def get_trending_posts(db: Session = Depends(get_db)):
-    posts = db.query(Post).order_by(desc(Post.post_score)).limit(1000)
-    paginated_posts = paginate(posts)
-    return paginated_posts
-
-
-@router.get("/posts/new", response_model=Page[PostBase])
-def get_new_posts(db: Session = Depends(get_db)):
-    posts = db.query(Post).order_by(desc(Post.date_created)).limit(1000)
-    paginated_posts = paginate(posts)
-    return paginated_posts
-
-
 @router.get("/posts/{post_id}", response_model=PostResponse)
 def get_post(
     post_id: int, user: dict = Depends(get_user), db: Session = Depends(get_db)
