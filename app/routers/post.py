@@ -1,4 +1,3 @@
-import requests
 from fastapi import APIRouter, Query, Depends, HTTPException
 from fastapi_pagination import Page, paginate as paginate_t
 from fastapi_pagination.ext.sqlalchemy import paginate
@@ -7,70 +6,48 @@ from sqlalchemy import desc, select, and_
 from sqlalchemy.orm import Session
 import numpy
 
-from app.config import settings
 from app.database import get_db
-from app.models import Post, Reaction
+from app.models import Post, Reaction, SearchQuery
 from app.schemas import PostBase, PostResponse, ReactionBase
-from app.utils import (
-    fetch_all_images,
-    get_image_vector,
-    get_user,
-    add_item_to_string,
-    calculate_post_score,
-)
-from app.types import ReactionType
+from app.utils import get_user, add_item_to_string, calculate_post_score
+from app.types import ReactionType, RatingType, OrderType
 
 
 router = APIRouter(tags=["Post"])
 
 
-@router.get("/posts/t", response_model=Page[PostBase])
-async def get_posts_t(tags: str = Query(None), db: Session = Depends(get_db)):
-    params = {"limit": 50, "json": 1}
-    if tags:
-        params["tags"] = tags
-
-    post_data = []
-    res = requests.get(f"{settings.API_URL}", params=params)
-    if res.status_code == 200:
-        post_data = res.json()
-
-    images = await fetch_all_images(post_data)
-    if not images:
-        return {"error": "message"}
-
-    for post in post_data:
-        if db.query(Post).filter(Post.post_id == post.get("id")).first():
-            continue
-        if not images.get(post.get("id")):
-            continue
-
-        image_vector = get_image_vector(images.get(post.get("id")))
-        if image_vector is None:
-            continue
-        new_post = Post(
-            post_id=post.get("id"),
-            preview_url=post.get("preview_url"),
-            sample_url=post.get("sample_url"),
-            file_url=post.get("file_url"),
-            owner=post.get("owner"),
-            rating=post.get("rating"),
-            tags=post.get("tags"),
-            source=post.get("source"),
-            score=post.get("score"),
-            embedding=image_vector,
-        )
-        db.add(new_post)
-    db.commit()
-    posts = db.query(Post).order_by(desc(Post.date_created))
-    paginated_posts = paginate(posts)
-    return paginated_posts
-
-
 @router.get("/posts", response_model=Page[PostBase])
-def get_posts(query: str = Query(None), db: Session = Depends(get_db)):
+def get_posts(
+    query: str = Query(None),
+    rating: RatingType = Query(),
+    order: OrderType = Query(),
+    db: Session = Depends(get_db),
+):
     posts = db.query(Post).order_by(desc(Post.post_score))
+
+    if order == OrderType.TRENDING:
+        posts = posts.order_by(desc(Post.post_score))
+    elif order == OrderType.LIKES:
+        posts = posts.order_by(desc(Post.likes))
+    elif order == OrderType.views:
+        posts = posts.order_by(desc(Post.views))
+    elif order == OrderType.NEWEST:
+        posts = posts.order_by(desc(Post.date_created))
+    elif order == OrderType.OLDEST:
+        posts = posts.order_by(Post.date_created)
+
+    if rating == RatingType.QUESTIONABLE:
+        posts = posts.filter(Post.rating == RatingType.QUESTIONABLE.value)
+
     if query:
+        db_query = db.get(SearchQuery, query)
+        if db_query:
+            db_query.count += 1
+        else:
+            new_query = SearchQuery(query=query)
+            db.add(new_query)
+        db.commit()
+
         words = query.lower().split()
         words = [word.strip() for word in words]
         conditions = [Post.tags.ilike(f"%{word}%") for word in words]

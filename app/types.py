@@ -10,3 +10,16 @@ class ReactionType(Enum):
 class PrivacyType(Enum):
     PRIVATE = "private"
     PUBLIC = "public"
+
+
+class RatingType(Enum):
+    EXPLICIT = "explicit"
+    QUESTIONABLE = "questionable"
+
+
+class OrderType(Enum):
+    TRENDING = "trending"
+    views = "views"
+    LIKES = "likes"
+    NEWEST = "newest"
+    OLDEST = "oldest"

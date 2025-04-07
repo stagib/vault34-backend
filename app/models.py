@@ -102,3 +102,9 @@ class Reaction(Base):
     comment_id = Column(Integer, ForeignKey("comments.id"), nullable=True)
     post = relationship("Post", back_populates="reactions")
     comment = relationship("Comment", back_populates="reactions")
+
+
+class SearchQuery(Base):
+    __tablename__ = "search_queries"
+    query = Column(String, primary_key=True)
+    count = Column(Integer, default=1)
