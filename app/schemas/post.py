@@ -25,3 +25,16 @@ class PostResponse(BaseModel):
     dislikes: int
     user_reaction: ReactionType = ReactionType.NONE
     post_score: float
+
+
+class PostCreate(BaseModel):
+    post_id: int
+    preview_url: str
+    sample_url: str
+    file_url: str
+    owner: str
+    rating: str
+    tags: str
+    source: str
+    score: int
+    embedding: list[float]

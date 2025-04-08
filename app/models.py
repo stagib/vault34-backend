@@ -34,7 +34,7 @@ class Post(Base):
     id = Column(Integer, primary_key=True, index=True)
     date_created = Column(DateTime, default=func.now(), nullable=False)
 
-    post_id = Column(Integer)
+    post_id = Column(Integer, unique=True, index=True)
     preview_url = Column(String)
     sample_url = Column(String)
     file_url = Column(String)
@@ -56,7 +56,7 @@ class Post(Base):
     post_score = Column(Float, default=0)
 
     __table_args__ = (
-        Index("ix_post_score_desc", score.desc()),
+        Index("ix_post_post_score_desc", post_score.desc()),
         Index("ix_posts_date_created", "date_created"),
     )
 

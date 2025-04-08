@@ -8,12 +8,35 @@ import numpy
 
 from app.database import get_db
 from app.models import Post, Reaction, SearchQuery
-from app.schemas import PostBase, PostResponse, ReactionBase
+from app.schemas import PostBase, PostResponse, ReactionBase, PostCreate
 from app.utils import get_user, add_item_to_string, calculate_post_score
 from app.types import ReactionType, RatingType, OrderType
 
 
 router = APIRouter(tags=["Post"])
+
+
+@router.post("/posts")
+def create_post(post: PostCreate, db: Session = Depends(get_db)):
+    db_post = db.query(Post).filter(Post.post_id == post.post_id).first()
+    if db_post:
+        return {"detail": "Post already exists"}
+
+    new_post = Post(
+        post_id=post.post_id,
+        preview_url=post.preview_url,
+        sample_url=post.sample_url,
+        file_url=post.file_url,
+        owner=post.owner,
+        rating=post.rating,
+        tags=post.tags,
+        source=post.source,
+        score=post.score,
+        embedding=post.embedding,
+    )
+    db.add(new_post)
+    db.commit()
+    return {"detail": "Successfully created post"}
 
 
 @router.get("/posts", response_model=Page[PostBase])
