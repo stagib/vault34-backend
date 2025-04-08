@@ -20,7 +20,7 @@ router = APIRouter(tags=["Post"])
 def create_post(post: PostCreate, db: Session = Depends(get_db)):
     db_post = db.query(Post).filter(Post.post_id == post.post_id).first()
     if db_post:
-        return {"detail": "Post already exists"}
+        return {"detail": f"Post {db_post.post_id} already exists"}
 
     new_post = Post(
         post_id=post.post_id,
@@ -36,7 +36,7 @@ def create_post(post: PostCreate, db: Session = Depends(get_db)):
     )
     db.add(new_post)
     db.commit()
-    return {"detail": "Successfully created post"}
+    return {"detail": f"Post {post.post_id} added"}
 
 
 @router.get("/posts", response_model=Page[PostBase])
