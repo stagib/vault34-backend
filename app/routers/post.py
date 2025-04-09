@@ -83,6 +83,21 @@ def get_posts(
     return paginated_posts
 
 
+@router.get("/posts/recommend", response_model=Page[PostBase])
+def get_post_recommendation(
+    user: dict = Depends(get_user),
+    db: Session = Depends(get_db),
+):
+    posts = db.query(Post).order_by(desc(Post.post_score))
+    if user and user.history:
+        history = list(map(int, user.history.strip().split()))
+        posts = posts.filter(~Post.id.in_(history))
+
+    posts = posts.limit(1000)
+    paginated_posts = paginate(posts)
+    return paginated_posts
+
+
 @router.get("/posts/{post_id}", response_model=PostResponse)
 def get_post(
     post_id: int, user: dict = Depends(get_user), db: Session = Depends(get_db)
