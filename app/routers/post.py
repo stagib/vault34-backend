@@ -17,24 +17,25 @@ router = APIRouter(tags=["Post"])
 
 
 @router.post("/posts")
-def create_post(post: PostCreate, db: Session = Depends(get_db)):
-    db_post = db.query(Post).filter(Post.post_id == post.post_id).first()
-    if db_post:
-        return {"detail": f"Post {db_post.post_id} already exists"}
+def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
+    for post in posts:
+        db_post = db.query(Post).filter(Post.post_id == post.post_id).first()
+        if db_post:
+            return {"detail": f"Post {db_post.post_id} already exists"}
 
-    new_post = Post(
-        post_id=post.post_id,
-        preview_url=post.preview_url,
-        sample_url=post.sample_url,
-        file_url=post.file_url,
-        owner=post.owner,
-        rating=post.rating,
-        tags=post.tags,
-        source=post.source,
-        score=post.score,
-        embedding=post.embedding,
-    )
-    db.add(new_post)
+        new_post = Post(
+            post_id=post.post_id,
+            preview_url=post.preview_url,
+            sample_url=post.sample_url,
+            file_url=post.file_url,
+            owner=post.owner,
+            rating=post.rating,
+            tags=post.tags,
+            source=post.source,
+            score=post.score,
+            embedding=post.embedding,
+        )
+        db.add(new_post)
     db.commit()
     return {"detail": f"Post {post.post_id} added"}
 
