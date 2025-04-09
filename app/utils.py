@@ -45,7 +45,11 @@ def calculate_post_score(post: Post):
     hours_since = (now - post.date_created).total_seconds() / 3600
     reactions = post.likes + post.dislikes
     score = (
-        reactions * 1 + post.comment_count * 2 + post.saves * 3 + post.views * 0.1
+        reactions
+        + post.comment_count * 2
+        + post.saves * 3
+        + post.views * 0.1
+        + post.score
     ) / (hours_since + 1) ** 1.5
     return score
 

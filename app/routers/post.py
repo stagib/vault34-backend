@@ -35,6 +35,7 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
             score=post.score,
             embedding=post.embedding,
         )
+        new_post.post_score = calculate_post_score(new_post)
         db.add(new_post)
     db.commit()
     return {"detail": f"Post {post.post_id} added"}
