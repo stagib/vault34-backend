@@ -111,7 +111,10 @@ def get_post_recommendation(post_id: int, db: Session = Depends(get_db)):
     results = db.scalars(
         select(Post)
         .order_by(Post.embedding.cosine_distance(vector), desc(Post.post_score))
-        .filter(Post.embedding != vector, Post.embedding.cosine_distance(vector) < 0.2)
+        .filter(
+            Post.embedding != vector,
+            Post.embedding.cosine_distance(vector).between(0.08, 0.4),
+        )
         .limit(1000)
     ).all()
     disable_installed_extensions_check()
