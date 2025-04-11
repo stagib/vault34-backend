@@ -15,3 +15,11 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+# neo4j setup
+from neo4j import GraphDatabase
+
+driver = GraphDatabase.driver(
+    settings.NEO4J_URI, auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD)
+)

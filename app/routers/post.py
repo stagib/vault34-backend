@@ -8,8 +8,9 @@ import numpy
 from app.database import get_db
 from app.models import Post, Reaction, SearchQuery
 from app.schemas import PostBase, PostResponse, ReactionBase, PostCreate
-from app.utils import get_user, add_item_to_string, calculate_post_score
 from app.types import ReactionType, RatingType, OrderType
+from app.utils import add_item_to_string, calculate_post_score
+from app.utils.auth import get_user
 
 
 router = APIRouter(tags=["Post"])

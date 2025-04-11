@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User, Vault
 from app.schemas import UserCreate, UserResponse, VaultResponse
-from app.utils import hash_password, create_token, verify_password, get_user
+from app.utils.auth import hash_password, create_token, verify_password, get_user
 from app.types import PrivacyType
 
 
