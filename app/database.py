@@ -1,6 +1,7 @@
+from neo4j import GraphDatabase
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 from app.config import settings
 
@@ -18,8 +19,6 @@ def get_db():
 
 
 # neo4j setup
-from neo4j import GraphDatabase
-
 driver = GraphDatabase.driver(
     settings.NEO4J_URI, auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD)
 )

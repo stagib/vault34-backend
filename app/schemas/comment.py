@@ -1,8 +1,9 @@
-from pydantic import BaseModel, Field
 from datetime import datetime
 
-from app.types import ReactionType
+from pydantic import BaseModel, Field
+
 from app.schemas import UserBase
+from app.types import ReactionType
 
 
 class CommentCreate(BaseModel):

@@ -1,17 +1,16 @@
-from fastapi import APIRouter, Query, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import desc, and_
-from sqlalchemy.orm import Session
 import numpy
+from sqlalchemy import and_, desc
+from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Post, Reaction, SearchQuery
-from app.schemas import PostBase, PostResponse, ReactionBase, PostCreate
-from app.types import ReactionType, RatingType, OrderType
+from app.schemas import PostBase, PostCreate, PostResponse, ReactionBase
+from app.types import OrderType, RatingType, ReactionType
 from app.utils import add_item_to_string, calculate_post_score
 from app.utils.auth import get_user
-
 
 router = APIRouter(tags=["Post"])
 
@@ -84,7 +83,7 @@ def get_posts(
 
 
 @router.get("/posts/recommend", response_model=Page[PostBase])
-def get_post_recommendation(
+def get_recommendation(
     user: dict = Depends(get_user),
     db: Session = Depends(get_db),
 ):
@@ -107,7 +106,9 @@ def get_post(
         raise HTTPException(status_code=404, detail="Post not found")
 
     if user:
-        user_reaction = post.reactions.filter(Reaction.user_id == user.id).first()
+        user_reaction = post.reactions.filter(
+            Reaction.user_id == user.id
+        ).first()
         if user_reaction:
             post.user_reaction = user_reaction.type
 
@@ -126,7 +127,9 @@ def get_post_recommendation(post_id: int, db: Session = Depends(get_db)):
 
     posts = (
         db.query(Post)
-        .order_by(Post.embedding.cosine_distance(vector), desc(Post.post_score))
+        .order_by(
+            Post.embedding.cosine_distance(vector), desc(Post.post_score)
+        )
         .filter(Post.embedding.cosine_distance(vector) > 0.05)
         .limit(1000)
     )
@@ -136,7 +139,11 @@ def get_post_recommendation(post_id: int, db: Session = Depends(get_db)):
 
 
 def add_reaction(
-    db_reaction: Reaction, reaction: Reaction, post: Post, user: dict, db: Session
+    db_reaction: Reaction,
+    reaction: Reaction,
+    post: Post,
+    user: dict,
+    db: Session,
 ):
     if db_reaction:
         if db_reaction.type == reaction.type:
@@ -160,7 +167,9 @@ def add_reaction(
         elif reaction.type == ReactionType.DISLIKE:
             post.dislikes += 1
 
-        new_reaction = Reaction(user_id=user.id, post_id=post.id, type=reaction.type)
+        new_reaction = Reaction(
+            user_id=user.id, post_id=post.id, type=reaction.type
+        )
         db.add(new_reaction)
         db.commit()
 

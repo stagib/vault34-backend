@@ -1,10 +1,19 @@
-from sqlalchemy import func, Column, Integer, String, DateTime, ForeignKey, Float, Index
-from sqlalchemy import Enum
-from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
+from sqlalchemy import (
+    Column,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    func,
+)
+from sqlalchemy.orm import relationship
 
 from app.database import Base
-from app.types import ReactionType, PrivacyType
+from app.types import PrivacyType, ReactionType
 
 
 class User(Base):
@@ -67,7 +76,9 @@ class Vault(Base):
     date_created = Column(DateTime, default=func.now())
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     title = Column(String, nullable=False)
-    privacy = Column(Enum(PrivacyType), nullable=False, default=PrivacyType.PRIVATE)
+    privacy = Column(
+        Enum(PrivacyType), nullable=False, default=PrivacyType.PRIVATE
+    )
     previews = Column(String, default="")
     post_count = Column(Integer, default=0)
     user = relationship("User", back_populates="vaults")
@@ -85,7 +96,9 @@ class Comment(Base):
     content = Column(String, nullable=False)
     post = relationship("Post", back_populates="comments")
     user = relationship("User", back_populates="comments")
-    reactions = relationship("Reaction", back_populates="comment", lazy="dynamic")
+    reactions = relationship(
+        "Reaction", back_populates="comment", lazy="dynamic"
+    )
     likes = Column(Integer, default=0)
     dislikes = Column(Integer, default=0)
 

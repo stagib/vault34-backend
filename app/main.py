@@ -5,8 +5,7 @@ from fastapi_pagination import add_pagination
 from app.config import settings
 from app.database import engine
 from app.models import Base
-from app.routers import post, user, auth, comment, vault
-
+from app.routers import auth, comment, post, user, vault
 
 app = FastAPI()
 app.include_router(post.router)

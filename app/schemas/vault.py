@@ -1,8 +1,9 @@
-from pydantic import BaseModel, Field
 from datetime import datetime
 
+from pydantic import BaseModel, Field
+
+from app.schemas import PostBase, UserBase
 from app.types import PrivacyType
-from app.schemas import UserBase, PostBase
 
 
 class VaultPostBase(BaseModel):

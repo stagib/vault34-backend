@@ -3,7 +3,9 @@ from neo4j import Transaction
 
 def create_user(tx: Transaction, id: int, username: str):
     tx.run(
-        "MERGE (u:User {id: $id}) SET u.username = $username", id=id, username=username
+        "MERGE (u:User {id: $id}) SET u.username = $username",
+        id=id,
+        username=username,
     )
 
 

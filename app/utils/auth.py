@@ -1,14 +1,14 @@
-import jwt
-from datetime import datetime, timezone, timedelta
-from argon2 import PasswordHasher
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
-from fastapi import Depends, Cookie
+
+from argon2 import PasswordHasher
+from fastapi import Cookie, Depends
+import jwt
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.models import User
-from app.config import settings
-
 
 ph = PasswordHasher()
 

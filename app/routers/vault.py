@@ -5,19 +5,20 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Vault, Post, VaultPost
-from app.schemas import VaultBase, VaultResponse, VaultPostBase
+from app.models import Post, Vault, VaultPost
+from app.schemas import VaultBase, VaultPostBase, VaultResponse
+from app.types import PrivacyType
 from app.utils import add_item_to_string, calculate_post_score
 from app.utils.auth import get_user
-from app.types import PrivacyType
-
 
 router = APIRouter(tags=["Vault"])
 
 
 @router.post("/vaults", response_model=VaultResponse)
 def create_vault(
-    vault: VaultBase, user: dict = Depends(get_user), db: Session = Depends(get_db)
+    vault: VaultBase,
+    user: dict = Depends(get_user),
+    db: Session = Depends(get_db),
 ):
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -30,7 +31,9 @@ def create_vault(
     if db_vault:
         raise HTTPException(status_code=409, detail="Vault already exists")
 
-    new_vault = Vault(title=vault.title, user_id=user.id, privacy=vault.privacy)
+    new_vault = Vault(
+        title=vault.title, user_id=user.id, privacy=vault.privacy
+    )
     db.add(new_vault)
     db.commit()
     return new_vault
@@ -63,7 +66,9 @@ def update_vault(
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     db_vault = (
-        db.query(Vault).filter(Vault.id == vault_id, Vault.user_id == user.id).first()
+        db.query(Vault)
+        .filter(Vault.id == vault_id, Vault.user_id == user.id)
+        .first()
     )
     if not db_vault:
         raise HTTPException(status_code=404, detail="Vault not found")
@@ -85,7 +90,9 @@ def delete_vault(
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     vault = (
-        db.query(Vault).filter(Vault.id == vault_id, Vault.user_id == user.id).first()
+        db.query(Vault)
+        .filter(Vault.id == vault_id, Vault.user_id == user.id)
+        .first()
     )
     if not vault:
         raise HTTPException(status_code=404, detail="Vault not found")
@@ -97,7 +104,9 @@ def delete_vault(
 
 @router.get("/vaults/{vault_id}/posts", response_model=Page[VaultPostBase])
 def get_vault_posts(
-    vault_id: int, user: dict = Depends(get_user), db: Session = Depends(get_db)
+    vault_id: int,
+    user: dict = Depends(get_user),
+    db: Session = Depends(get_db),
 ):
     vault = db.query(Vault).filter(Vault.id == vault_id).first()
     if not vault:
@@ -128,7 +137,9 @@ def add_post_to_vault(
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     vault = (
-        db.query(Vault).filter(Vault.id == vault_id, Vault.user_id == user.id).first()
+        db.query(Vault)
+        .filter(Vault.id == vault_id, Vault.user_id == user.id)
+        .first()
     )
     if not vault:
         raise HTTPException(status_code=404, detail="Vault not found")
@@ -140,7 +151,9 @@ def add_post_to_vault(
     post.saves += 1
     post.post_score = calculate_post_score(post)
     vault.post_count += 1
-    vault.previews = add_item_to_string(vault.previews, post.preview_url, limit=3)
+    vault.previews = add_item_to_string(
+        vault.previews, post.preview_url, limit=3
+    )
     new_entry = VaultPost(vault_id=vault.id, post_id=post.id)
     db.add(new_entry)
     db.commit()
@@ -158,7 +171,9 @@ def remove_post_from_vault(
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     vault = (
-        db.query(Vault).filter(Vault.id == vault_id, Vault.user_id == user.id).first()
+        db.query(Vault)
+        .filter(Vault.id == vault_id, Vault.user_id == user.id)
+        .first()
     )
     if not vault:
         raise HTTPException(status_code=404, detail="Vault not found")

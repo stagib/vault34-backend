@@ -1,17 +1,17 @@
-import requests
 import asyncio
-import aiohttp
-import torch
-import clip
-from fastapi import APIRouter, Query, Depends
-from sqlalchemy.orm import Session
-from PIL import Image
 from io import BytesIO
+
+from PIL import Image
+import aiohttp
+import clip
+from fastapi import APIRouter, Depends, Query
+import requests
+from sqlalchemy.orm import Session
+import torch
 
 from app.config import settings
 from app.database import get_db
 from app.models import Post
-
 
 router = APIRouter()
 device = "cuda" if torch.cuda.is_available() else "cpu"
