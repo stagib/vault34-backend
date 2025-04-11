@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Comment, Post, Reaction
-from app.schemas import CommentCreate, CommentResponse, ReactionBase
+from app.schemas.comment import CommentCreate, CommentResponse
+from app.schemas.reaction import ReactionBase
 from app.types import ReactionType
 from app.utils.auth import get_user
 

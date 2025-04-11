@@ -5,18 +5,20 @@ import numpy
 from sqlalchemy import and_, desc
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import driver, get_db
 from app.models import Post, Reaction, SearchQuery
-from app.schemas import PostBase, PostCreate, PostResponse, ReactionBase
+from app.schemas.post import PostBase, PostCreate, PostResponse
+from app.schemas.reaction import ReactionBase
 from app.types import OrderType, RatingType, ReactionType
 from app.utils import add_item_to_string, calculate_post_score
 from app.utils.auth import get_user
+from app.utils.neo4j import create_post
 
 router = APIRouter(tags=["Post"])
 
 
 @router.post("/posts")
-def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
+def add_post(posts: list[PostCreate], db: Session = Depends(get_db)):
     for post in posts:
         db_post = db.query(Post).filter(Post.post_id == post.post_id).first()
         if db_post:
@@ -32,11 +34,22 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
             tags=post.tags,
             source=post.source,
             score=post.score,
+            likes=post.score,
+            post_score=post.score,
             embedding=post.embedding,
         )
-        new_post.post_score = calculate_post_score(new_post)
-        db.add(new_post)
-    db.commit()
+
+        try:
+            db.add(new_post)
+            db.flush()
+
+            with driver.session() as session:
+                session.execute_write(create_post, new_post)
+
+            db.commit()
+        except Exception as e:
+            db.rollback()
+
     return {"detail": f"Post {post.post_id} added"}
 
 

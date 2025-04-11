@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Post, Vault, VaultPost
-from app.schemas import VaultBase, VaultPostBase, VaultResponse
+from app.schemas.vault import VaultBase, VaultPostBase, VaultResponse
 from app.types import PrivacyType
 from app.utils import add_item_to_string, calculate_post_score
 from app.utils.auth import get_user
