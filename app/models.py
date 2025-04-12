@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Column,
@@ -8,7 +9,6 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
-    func,
 )
 from sqlalchemy.orm import relationship
 
@@ -19,7 +19,10 @@ from app.types import PrivacyType, ReactionType
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    date_created = Column(DateTime, default=func.now(), nullable=False)
+    date_created = Column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
+    )
+
     username = Column(String, nullable=False)
     password = Column(String, nullable=False)
     history = Column(String, nullable=False, default="")
@@ -31,9 +34,13 @@ class User(Base):
 class VaultPost(Base):
     __tablename__ = "vault_post"
     id = Column(Integer, primary_key=True, index=True)
-    date_created = Column(DateTime, default=func.now())
+    date_created = Column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
+    )
+
     vault_id = Column(Integer, ForeignKey("vaults.id"), nullable=False)
     post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
+
     vault = relationship("Vault", back_populates="vault_posts")
     post = relationship("Post", backref="vault_post")
 
@@ -41,7 +48,9 @@ class VaultPost(Base):
 class Post(Base):
     __tablename__ = "posts"
     id = Column(Integer, primary_key=True, index=True)
-    date_created = Column(DateTime, default=func.now(), nullable=False)
+    date_created = Column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
+    )
 
     post_id = Column(Integer, unique=True, index=True)
     preview_url = Column(String)
@@ -51,7 +60,6 @@ class Post(Base):
     rating = Column(String)
     tags = Column(String)
     source = Column(String)
-    score = Column(Integer)
 
     reactions = relationship("Reaction", back_populates="post", lazy="dynamic")
     comments = relationship("Comment", back_populates="post", lazy="dynamic")
@@ -62,10 +70,10 @@ class Post(Base):
     views = Column(Integer, default=0)
     saves = Column(Integer, default=0)
     comment_count = Column(Integer, default=0)
-    post_score = Column(Float, default=0)
+    score = Column(Float, default=0)
 
     __table_args__ = (
-        Index("ix_post_post_score_desc", post_score.desc()),
+        Index("ix_post_score_desc", score.desc()),
         Index("ix_posts_date_created", "date_created"),
     )
 
@@ -73,14 +81,18 @@ class Post(Base):
 class Vault(Base):
     __tablename__ = "vaults"
     id = Column(Integer, primary_key=True, index=True)
-    date_created = Column(DateTime, default=func.now())
+    date_created = Column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
+    )
+
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     title = Column(String, nullable=False)
+    previews = Column(String, default="")
+    post_count = Column(Integer, default=0)
     privacy = Column(
         Enum(PrivacyType), nullable=False, default=PrivacyType.PRIVATE
     )
-    previews = Column(String, default="")
-    post_count = Column(Integer, default=0)
+
     user = relationship("User", back_populates="vaults")
     vault_posts = relationship(
         "VaultPost", back_populates="vault", cascade="all, delete-orphan"
@@ -90,29 +102,36 @@ class Vault(Base):
 class Comment(Base):
     __tablename__ = "comments"
     id = Column(Integer, primary_key=True, index=True)
-    date_created = Column(DateTime, default=func.now(), nullable=False)
+    date_created = Column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
+    )
+
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
     content = Column(String, nullable=False)
+    likes = Column(Integer, default=0)
+    dislikes = Column(Integer, default=0)
+
     post = relationship("Post", back_populates="comments")
     user = relationship("User", back_populates="comments")
     reactions = relationship(
         "Reaction", back_populates="comment", lazy="dynamic"
     )
-    likes = Column(Integer, default=0)
-    dislikes = Column(Integer, default=0)
 
 
 class Reaction(Base):
     __tablename__ = "reactions"
     id = Column(Integer, primary_key=True, index=True)
-    date_created = Column(DateTime, default=func.now(), nullable=False)
+    date_created = Column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
+    )
+
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     user = relationship("User", back_populates="reactions")
     type = Column(Enum(ReactionType), nullable=False)
-
     post_id = Column(Integer, ForeignKey("posts.id"), nullable=True)
     comment_id = Column(Integer, ForeignKey("comments.id"), nullable=True)
+
     post = relationship("Post", back_populates="reactions")
     comment = relationship("Comment", back_populates="reactions")
 

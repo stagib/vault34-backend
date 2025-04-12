@@ -35,7 +35,6 @@ def add_post(posts: list[PostCreate], db: Session = Depends(get_db)):
             source=post.source,
             score=post.score,
             likes=post.score,
-            post_score=post.score,
             embedding=post.embedding,
         )
 
@@ -128,7 +127,7 @@ def get_post(
         user.history = add_item_to_string(user.history, str(post_id))
         db.commit()
 
-    post.post_score = calculate_post_score(post)
+    post.score = calculate_post_score(post)
     db.commit()
     return post
 

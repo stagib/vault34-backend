@@ -149,7 +149,7 @@ def add_post_to_vault(
         raise HTTPException(status_code=404, detail="Post not found")
 
     post.saves += 1
-    post.post_score = calculate_post_score(post)
+    post.score = calculate_post_score(post)
     vault.post_count += 1
     vault.previews = add_item_to_string(
         vault.previews, post.preview_url, limit=3

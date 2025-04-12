@@ -33,12 +33,16 @@ def register_user(
     hashed_password = hash_password(user.password)
     new_user = User(username=user.username, password=hashed_password)
 
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+    try:
+        db.add(new_user)
+        db.flush()
 
-    with driver.session() as session:
-        session.execute_write(create_user, new_user.id, new_user.username)
+        with driver.session() as session:
+            session.execute_write(create_user, new_user)
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
 
     token = create_token(id=new_user.id)
     response.set_cookie(key="auth_token", value=token)

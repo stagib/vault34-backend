@@ -1,18 +1,20 @@
 from neo4j import Transaction
 
 
-def create_user(tx: Transaction, id: int, username: str):
+def create_user(tx: Transaction, user):
     tx.run(
-        "MERGE (u:User {id: $id}) SET u.username = $username",
-        id=id,
-        username=username,
+        "MERGE (u:User {id: $id}) SET  u.date_created = datetime($date_created), u.username = $username",
+        id=user.id,
+        date_created=user.date_created,
+        username=user.username,
     )
 
 
 def create_post(tx: Transaction, post):
     tx.run(
-        "MERGE (p:Post {id: $id}) SET p.score = $score",
+        "MERGE (p:Post {id: $id}) SET p.date_created = datetime($date_created), p.score = $score",
         id=post.id,
+        date_created=post.date_created,
         score=post.score,
     )
 
