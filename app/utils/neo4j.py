@@ -17,17 +17,19 @@ def create_post(tx: Transaction, post):
     )
 
 
-def create_reaction_relationship(
-    tx: Transaction, user_id: int, post_id: int, type: str
-):
+def create_reaction(tx: Transaction, user_id: int, post_id: int, type: str):
     tx.run(
         """
         MATCH (u:User {id: $user_id})
         MATCH (p:Post {id: $post_id})
         MERGE (u)-[r:REACTED]->(p)
-        SET r.type = ${type}
+        SET r.type = $type
     """,
         user_id=user_id,
         post_id=post_id,
         type=type,
     )
+
+
+def create_vault(tx: Transaction, user_id: int, title: str):
+    pass

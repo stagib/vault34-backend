@@ -12,7 +12,7 @@ from app.schemas.reaction import ReactionBase
 from app.types import OrderType, RatingType, ReactionType
 from app.utils import add_item_to_string, calculate_post_score
 from app.utils.auth import get_user
-from app.utils.neo4j import create_post
+from app.utils.neo4j import create_post, create_reaction
 
 router = APIRouter(tags=["Post"])
 
@@ -173,7 +173,6 @@ def add_reaction(
             post.dislikes += 1
 
         db_reaction.type = reaction.type
-        db.commit()
     else:
         if reaction.type == ReactionType.LIKE:
             post.likes += 1
@@ -184,7 +183,6 @@ def add_reaction(
             user_id=user.id, post_id=post.id, type=reaction.type
         )
         db.add(new_reaction)
-        db.commit()
 
 
 @router.post("/posts/{post_id}/reactions")
@@ -207,7 +205,22 @@ def react_to_post(
         .first()
     )
 
-    add_reaction(db_reaction, reaction, post, user, db)
+    try:
+        add_reaction(db_reaction, reaction, post, user, db)
+
+        with driver.session() as session:
+            session.execute_write(
+                create_reaction,
+                user.id,
+                post.id,
+                reaction.type.value,
+            )
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(e)
+
     return {
         "type": reaction.type,
         "likes": post.likes,
