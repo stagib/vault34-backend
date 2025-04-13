@@ -10,7 +10,7 @@ from app.schemas.vault import VaultBase, VaultPostBase, VaultResponse
 from app.types import PrivacyType
 from app.utils import add_item_to_string, calculate_post_score
 from app.utils.auth import get_user
-from app.utils.neo4j.vault import add_post_, create_vault_
+from app.utils.neo4j.vault import *
 
 router = APIRouter(tags=["Vault"])
 
@@ -44,10 +44,10 @@ def create_vault(
             session.execute_write(create_vault_, new_vault)
 
         db.commit()
-        return new_vault
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal error")
+    return new_vault
 
 
 @router.get("/vaults/{vault_id}", response_model=VaultResponse)
@@ -87,7 +87,13 @@ def update_vault(
     db_vault.title = vault.title
     db_vault.privacy = vault.privacy
 
-    db.commit()
+    try:
+        with driver.session() as session:
+            session.execute_write(update_vault_, db_vault)
+
+        db.commit()
+    except:
+        raise HTTPException(status_code=500, detail="Internal error")
     return db_vault
 
 
@@ -108,8 +114,15 @@ def delete_vault(
     if not vault:
         raise HTTPException(status_code=404, detail="Vault not found")
 
-    db.delete(vault)
-    db.commit()
+    try:
+        with driver.session() as session:
+            session.execute_write(delete_vault_, vault.id)
+
+        db.delete(vault)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal error")
     return {"detail": "Successfully deleted vault"}
 
 
@@ -174,8 +187,8 @@ def add_post_to_vault(
 
         db.commit()
     except Exception as e:
-        print(e)
         db.rollback()
+        raise HTTPException(status_code=500, detail="Internal error")
     return {"detail": "Added post to vault"}
 
 
@@ -201,8 +214,15 @@ def remove_post_from_vault(
     if not post_entry:
         raise HTTPException(status_code=404, detail="Entry not found")
 
-    post_entry.post.saves -= 1
-    vault.post_count -= 1
-    db.delete(post_entry)
-    db.commit()
+    try:
+        with driver.session() as session:
+            session.execute_write(remove_post_, vault.id, post_entry.post_id)
+
+        post_entry.post.saves -= 1
+        vault.post_count -= 1
+        db.delete(post_entry)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal error")
     return {"detail": "Removed entry from vault"}

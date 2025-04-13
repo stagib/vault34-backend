@@ -18,12 +18,44 @@ def create_vault_(tx: Transaction, vault: Vault):
     )
 
 
+def update_vault_(tx: Transaction, vault: Vault):
+    tx.run(
+        """
+        MATCH (v:Vault {id: $id}) 
+        SET v.title = $title
+    """,
+        id=vault.id,
+        title=vault.title,
+    )
+
+
+def delete_vault_(tx: Transaction, vault_id: int):
+    tx.run(
+        """
+        MATCH (v:Vault {id: $id})
+        DETACH DELETE v
+    """,
+        id=vault_id,
+    )
+
+
 def add_post_(tx: Transaction, vault_id: int, post_id: int):
     tx.run(
         """
         MATCH (v:Vault {id: $vault_id})
         MATCH (p:Post {id: $post_id})
         MERGE (v)-[:CONTAINS]->(p)
+    """,
+        vault_id=vault_id,
+        post_id=post_id,
+    )
+
+
+def remove_post_(tx: Transaction, vault_id: int, post_id: int):
+    tx.run(
+        """
+        MATCH (:Vault {id: $vault_id})-[c:CONTAINS]->(:Post {id: $post_id})
+        DELETE c
     """,
         vault_id=vault_id,
         post_id=post_id,
