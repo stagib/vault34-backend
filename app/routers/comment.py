@@ -4,12 +4,13 @@ from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import driver, get_db
 from app.models import Comment, Post, Reaction
 from app.schemas.comment import CommentCreate, CommentResponse
 from app.schemas.reaction import ReactionBase
 from app.types import ReactionType
 from app.utils.auth import get_user
+from app.utils.neo4j.comment import *
 
 router = APIRouter(tags=["Comment"])
 
@@ -70,9 +71,18 @@ def create_comment(
     new_comment = Comment(
         user_id=user.id, post_id=post.id, content=comment.content
     )
-    db.add(new_comment)
-    db.commit()
-    db.refresh(new_comment)
+
+    try:
+        db.add(new_comment)
+        db.flush()
+
+        with driver.session() as session:
+            session.execute_write(create_comment_, new_comment)
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal error")
     return new_comment
 
 
@@ -99,8 +109,15 @@ def delete_comment(
         raise HTTPException(status_code=404, detail="Comment not found")
 
     comment.post.comment_count -= 1
-    db.delete(comment)
-    db.commit()
+    try:
+        with driver.session() as session:
+            session.execute_write(delete_comment_, comment.id)
+
+        db.delete(comment)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal error")
     return {"detail": "Removed comment"}
 
 
@@ -126,7 +143,6 @@ def add_reaction(
             comment.dislikes += 1
 
         db_reaction.type = reaction.type
-        db.commit()
     else:
         if reaction.type == ReactionType.LIKE:
             comment.likes += 1
@@ -137,7 +153,6 @@ def add_reaction(
             user_id=user.id, comment_id=comment.id, type=reaction.type
         )
         db.add(new_reaction)
-        db.commit()
 
 
 @router.post("/posts/{post_id}/comments/{comment_id}/reactions")
@@ -165,7 +180,18 @@ def react_to_comment(
         .first()
     )
 
-    add_reaction(db_reaction, reaction, comment, user, db)
+    try:
+        add_reaction(db_reaction, reaction, comment, user, db)
+
+        with driver.session() as session:
+            session.execute_write(
+                create_reaction_, user.id, comment.id, reaction.type.value
+            )
+
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal error")
     return {
         "type": reaction.type,
         "likes": comment.likes,
