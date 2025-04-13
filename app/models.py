@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Column,

@@ -4,12 +4,13 @@ from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import driver, get_db
 from app.models import Post, Vault, VaultPost
 from app.schemas.vault import VaultBase, VaultPostBase, VaultResponse
 from app.types import PrivacyType
 from app.utils import add_item_to_string, calculate_post_score
 from app.utils.auth import get_user
+from app.utils.neo4j.vault import add_post_, create_vault_
 
 router = APIRouter(tags=["Vault"])
 
@@ -34,9 +35,19 @@ def create_vault(
     new_vault = Vault(
         title=vault.title, user_id=user.id, privacy=vault.privacy
     )
-    db.add(new_vault)
-    db.commit()
-    return new_vault
+
+    try:
+        db.add(new_vault)
+        db.flush()
+
+        with driver.session() as session:
+            session.execute_write(create_vault_, new_vault)
+
+        db.commit()
+        return new_vault
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal error")
 
 
 @router.get("/vaults/{vault_id}", response_model=VaultResponse)
@@ -148,15 +159,23 @@ def add_post_to_vault(
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
-    post.saves += 1
-    post.score = calculate_post_score(post)
-    vault.post_count += 1
-    vault.previews = add_item_to_string(
-        vault.previews, post.preview_url, limit=3
-    )
-    new_entry = VaultPost(vault_id=vault.id, post_id=post.id)
-    db.add(new_entry)
-    db.commit()
+    try:
+        post.saves += 1
+        post.score = calculate_post_score(post)
+        vault.post_count += 1
+        vault.previews = add_item_to_string(
+            vault.previews, post.preview_url, limit=3
+        )
+        new_entry = VaultPost(vault_id=vault.id, post_id=post.id)
+        db.add(new_entry)
+
+        with driver.session() as session:
+            session.execute_write(add_post_, vault.id, post.id)
+
+        db.commit()
+    except Exception as e:
+        print(e)
+        db.rollback()
     return {"detail": "Added post to vault"}
 
 

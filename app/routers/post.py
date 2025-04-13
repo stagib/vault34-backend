@@ -12,13 +12,13 @@ from app.schemas.reaction import ReactionBase
 from app.types import OrderType, RatingType, ReactionType
 from app.utils import add_item_to_string, calculate_post_score
 from app.utils.auth import get_user
-from app.utils.neo4j import create_post, create_reaction
+from app.utils.neo4j.post import create_post_, create_reaction_
 
 router = APIRouter(tags=["Post"])
 
 
 @router.post("/posts")
-def add_post(posts: list[PostCreate], db: Session = Depends(get_db)):
+def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
     for post in posts:
         db_post = db.query(Post).filter(Post.post_id == post.post_id).first()
         if db_post:
@@ -43,7 +43,7 @@ def add_post(posts: list[PostCreate], db: Session = Depends(get_db)):
             db.flush()
 
             with driver.session() as session:
-                session.execute_write(create_post, new_post)
+                session.execute_write(create_post_, new_post)
 
             db.commit()
         except Exception as e:
@@ -209,7 +209,7 @@ def react_to_post(
 
         with driver.session() as session:
             session.execute_write(
-                create_reaction,
+                create_reaction_,
                 user.id,
                 post.id,
                 reaction.type.value,

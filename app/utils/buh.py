@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -22,7 +22,7 @@ def get_emeddings(post_ids: str, db: Session):
 
 
 def calculate_post_score(post: Post):
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     hours_since = (now - post.date_created).total_seconds() / 3600
     reactions = post.likes + post.dislikes
     score = (

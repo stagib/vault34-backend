@@ -15,7 +15,7 @@ from app.utils.auth import (
     hash_password,
     verify_password,
 )
-from app.utils.neo4j import create_user
+from app.utils.neo4j.user import create_user_
 
 router = APIRouter(tags=["User"])
 
@@ -38,7 +38,7 @@ def register_user(
         db.flush()
 
         with driver.session() as session:
-            session.execute_write(create_user, new_user)
+            session.execute_write(create_user_, new_user)
 
         db.commit()
     except Exception as e:
