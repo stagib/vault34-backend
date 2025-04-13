@@ -15,7 +15,7 @@ from app.utils.auth import (
     hash_password,
     verify_password,
 )
-from app.utils.neo4j.user import create_user_
+from app.utils.neo4j.user import *
 
 router = APIRouter(tags=["User"])
 
@@ -43,6 +43,7 @@ def register_user(
         db.commit()
     except Exception as e:
         db.rollback()
+        raise HTTPException(status_code=500, detail="Internal error")
 
     token = create_token(id=new_user.id)
     response.set_cookie(key="auth_token", value=token)
@@ -98,3 +99,36 @@ def get_user_vaults(
 
     paginated_vaults = paginate(vaults)
     return paginated_vaults
+
+
+@router.post("/users/{user_id}/followers")
+def follow_user(
+    user_id: int, user: dict = Depends(get_user), db: Session = Depends(get_db)
+):
+    query_user = db.query(User).filter(User.id == user_id).first()
+    if not query_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    if user.id == query_user.id:
+        raise HTTPException(status_code=400, detail="Can not follow self")
+
+    try:
+        with driver.session() as session:
+            session.execute_write(follow_user_, user.id, query_user.id)
+
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal error")
+    return {"detail": "Followed user"}
+
+
+@router.delete("/users/{user_id}/followers")
+def unfollow_user(user_id: int, user: dict = Depends(get_user)):
+    try:
+        with driver.session() as session:
+            session.execute_write(unfollow_user_, user.id, user_id)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal error")
+    return {"detail": "Unfollowed user"}

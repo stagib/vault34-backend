@@ -46,8 +46,9 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
                 session.execute_write(create_post_, new_post)
 
             db.commit()
-        except Exception as e:
+        except Exception:
             db.rollback()
+            raise HTTPException(status_code=500, detail="Internal error")
 
     return {"detail": f"Post {post.post_id} added"}
 
@@ -218,7 +219,7 @@ def react_to_post(
         db.commit()
     except Exception as e:
         db.rollback()
-        print(e)
+        raise HTTPException(status_code=500, detail="Internal error")
 
     return {
         "type": reaction.type,
