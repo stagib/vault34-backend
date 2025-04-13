@@ -9,8 +9,10 @@ from app.models import Comment, Post, Reaction
 from app.schemas.comment import CommentCreate, CommentResponse
 from app.schemas.reaction import ReactionBase
 from app.types import ReactionType
+from app.utils import calculate_post_score
 from app.utils.auth import get_user
 from app.utils.neo4j.comment import *
+from app.utils.neo4j.post import update_post_
 
 router = APIRouter(tags=["Comment"])
 
@@ -48,8 +50,15 @@ def get_comments(
             if reactions_map.get(comment.id):
                 comment.user_reaction = reactions_map.get(comment.id)
 
+    db_post.score = calculate_post_score(db_post)
     db_post.views += 1
-    db.commit()
+
+    try:
+        with driver.session() as session:
+            session.execute_write(update_post_, db_post)
+        db.commit()
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal error")
     return paginated_comments
 
 

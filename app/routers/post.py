@@ -10,9 +10,9 @@ from app.models import Post, Reaction, SearchQuery
 from app.schemas.post import PostBase, PostCreate, PostResponse
 from app.schemas.reaction import ReactionBase
 from app.types import OrderType, RatingType, ReactionType
-from app.utils import add_item_to_string, calculate_post_score
+from app.utils import add_item_to_string
 from app.utils.auth import get_user
-from app.utils.neo4j.post import create_post_, create_reaction_
+from app.utils.neo4j.post import *
 
 router = APIRouter(tags=["Post"])
 
@@ -128,8 +128,6 @@ def get_post(
         user.history = add_item_to_string(user.history, str(post_id))
         db.commit()
 
-    post.score = calculate_post_score(post)
-    db.commit()
     return post
 
 

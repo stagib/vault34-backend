@@ -5,9 +5,23 @@ from app.models import Post
 
 def create_post_(tx: Transaction, post: Post):
     tx.run(
-        "MERGE (p:Post {id: $id}) SET p.date_created = datetime($date_created), p.score = $score",
+        """
+        MERGE (p:Post {id: $id}) 
+        SET p.date_created = datetime($date_created), p.score = $score 
+    """,
         id=post.id,
         date_created=post.date_created,
+        score=post.score,
+    )
+
+
+def update_post_(tx: Transaction, post: Post):
+    tx.run(
+        """
+        MATCH (p:Post {id: $id}) 
+        SET p.score = $score 
+    """,
+        id=post.id,
         score=post.score,
     )
 
