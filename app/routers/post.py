@@ -62,10 +62,10 @@ def get_posts(
     order: OrderType = Query(OrderType.TRENDING),
     db: Session = Depends(get_db),
 ):
-    posts = db.query(Post).order_by(desc(Post.post_score))
+    posts = db.query(Post).order_by(desc(Post.score))
 
     if order == OrderType.TRENDING:
-        posts = posts.order_by(desc(Post.post_score))
+        posts = posts.order_by(desc(Post.score))
     elif order == OrderType.LIKES:
         posts = posts.order_by(desc(Post.likes))
     elif order == OrderType.views:
@@ -102,7 +102,7 @@ def get_recommendation(
     user: dict = Depends(get_user),
     db: Session = Depends(get_db),
 ):
-    posts = db.query(Post).order_by(desc(Post.post_score))
+    posts = db.query(Post).order_by(desc(Post.score))
     if user and user.history:
         history = list(map(int, user.history.strip().split()))
         posts = posts.filter(~Post.id.in_(history))
@@ -140,9 +140,7 @@ def get_post_recommendation(post_id: int, db: Session = Depends(get_db)):
 
     posts = (
         db.query(Post)
-        .order_by(
-            Post.embedding.cosine_distance(vector), desc(Post.post_score)
-        )
+        .order_by(Post.embedding.cosine_distance(vector), desc(Post.score))
         .filter(Post.embedding.cosine_distance(vector) > 0.05)
         .limit(1000)
     )

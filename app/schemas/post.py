@@ -21,11 +21,10 @@ class PostResponse(BaseModel):
     owner: str
     rating: str
     tags: str
-    score: int
+    score: float
     likes: int
     dislikes: int
     user_reaction: ReactionType = ReactionType.NONE
-    post_score: float
 
 
 class PostCreate(BaseModel):
