@@ -90,6 +90,9 @@ class Vault(Base):
     title = Column(String, nullable=False)
     previews = Column(String, default="")
     post_count = Column(Integer, default=0)
+    likes = Column(Integer, default=0)
+    dislikes = Column(Integer, default=0)
+    layout = Column(String, default="")
     privacy = Column(
         Enum(PrivacyType), nullable=False, default=PrivacyType.PRIVATE
     )

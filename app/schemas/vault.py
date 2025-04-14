@@ -23,5 +23,7 @@ class VaultResponse(BaseModel):
     title: str
     privacy: PrivacyType
     post_count: int
+    likes: int
+    dislikes: int
     user: UserBase
     previews: str

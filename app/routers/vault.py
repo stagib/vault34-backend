@@ -5,10 +5,15 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.database import driver, get_db
-from app.models import Post, Vault, VaultPost
+from app.models import Post, Vault, VaultPost, Reaction
 from app.schemas.vault import VaultBase, VaultPostBase, VaultResponse
+from app.schemas.reaction import ReactionBase
 from app.types import PrivacyType
-from app.utils import add_item_to_string, calculate_post_score
+from app.utils import (
+    add_item_to_string,
+    calculate_post_score,
+    update_reaction_counter,
+)
 from app.utils.auth import get_user
 from app.utils.neo4j.vault import *
 
@@ -124,6 +129,37 @@ def delete_vault(
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal error")
     return {"detail": "Successfully deleted vault"}
+
+
+@router.post("/vaults/{vault_id}/reactions")
+def react_to_vault(
+    reaction: ReactionBase,
+    vault_id: int,
+    user: dict = Depends(get_user),
+    db: Session = Depends(get_db),
+):
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    vault = db.get(Vault, vault_id)
+    if not vault:
+        raise HTTPException(status_code=404, detail="Vault not found")
+
+    try:
+        with driver.session() as session:
+            db_reaction = session.execute_write(
+                create_reaction_, user.id, vault.id, reaction.type.value
+            )
+
+        update_reaction_counter(vault, db_reaction, reaction)
+        db.commit()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal error")
+    return {
+        "type": reaction.type,
+        "likes": vault.likes,
+        "dislikes": vault.dislikes,
+    }
 
 
 @router.get("/vaults/{vault_id}/posts", response_model=Page[VaultPostBase])
