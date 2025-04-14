@@ -151,9 +151,12 @@ def react_to_vault(
                 create_reaction_, user.id, vault.id, reaction.type.value
             )
 
-        update_reaction_counter(vault, db_reaction, reaction)
+            update_reaction_counter(vault, db_reaction, reaction)
+            session.execute_write(update_vault_, vault)
+
         db.commit()
     except Exception as e:
+        print(e)
         raise HTTPException(status_code=500, detail="Internal error")
     return {
         "type": reaction.type,

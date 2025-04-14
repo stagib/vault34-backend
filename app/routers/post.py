@@ -19,36 +19,38 @@ router = APIRouter(tags=["Post"])
 
 @router.post("/posts")
 def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
-    for post in posts:
-        db_post = db.query(Post).filter(Post.post_id == post.post_id).first()
-        if db_post:
-            return {"detail": f"Post {db_post.post_id} already exists"}
+    with driver.session() as session:
+        for post in posts:
+            db_post = (
+                db.query(Post).filter(Post.post_id == post.post_id).first()
+            )
+            if db_post:
+                return {"detail": f"Post {db_post.post_id} already exists"}
 
-        new_post = Post(
-            post_id=post.post_id,
-            preview_url=post.preview_url,
-            sample_url=post.sample_url,
-            file_url=post.file_url,
-            owner=post.owner,
-            rating=post.rating,
-            tags=post.tags,
-            source=post.source,
-            score=post.score,
-            likes=post.score,
-            embedding=post.embedding,
-        )
+            new_post = Post(
+                post_id=post.post_id,
+                preview_url=post.preview_url,
+                sample_url=post.sample_url,
+                file_url=post.file_url,
+                owner=post.owner,
+                rating=post.rating,
+                tags=post.tags,
+                source=post.source,
+                score=post.score,
+                likes=post.score,
+                embedding=post.embedding,
+            )
 
-        try:
-            db.add(new_post)
-            db.flush()
+            try:
+                db.add(new_post)
+                db.flush()
 
-            with driver.session() as session:
                 session.execute_write(create_post_, new_post)
 
-            db.commit()
-        except Exception:
-            db.rollback()
-            raise HTTPException(status_code=500, detail="Internal error")
+                db.commit()
+            except Exception:
+                db.rollback()
+                raise HTTPException(status_code=500, detail="Internal error")
 
     return {"detail": f"Post {post.post_id} added"}
 

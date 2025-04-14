@@ -8,13 +8,16 @@ def create_vault_(tx: Transaction, vault: Vault):
         """
         MATCH (u:User {id: $user_id})
         MERGE (v:Vault {id: $id}) 
-        SET v.date_created = datetime($date_created), v.title = $title
+        SET v.date_created = datetime($date_created)
+        SET v.title = $title
+        SET v.score = $score
         MERGE (u)-[:CREATED]->(v)
     """,
         user_id=vault.user_id,
         id=vault.id,
         date_created=vault.date_created,
         title=vault.title,
+        score=vault.likes + vault.dislikes,
     )
 
 
@@ -23,9 +26,11 @@ def update_vault_(tx: Transaction, vault: Vault):
         """
         MATCH (v:Vault {id: $id}) 
         SET v.title = $title
+        SET v.score = $score
     """,
         id=vault.id,
         title=vault.title,
+        score=vault.likes + vault.dislikes,
     )
 
 
