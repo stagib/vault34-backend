@@ -15,6 +15,7 @@ class VaultPostBase(BaseModel):
 class VaultBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=30)
     privacy: PrivacyType
+    layout: str = Field(..., min_length=1, max_length=30)
 
 
 class VaultResponse(BaseModel):
@@ -22,6 +23,7 @@ class VaultResponse(BaseModel):
     date_created: datetime
     title: str
     privacy: PrivacyType
+    layout: str
     post_count: int
     likes: int
     dislikes: int

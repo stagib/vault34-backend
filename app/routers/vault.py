@@ -91,6 +91,7 @@ def update_vault(
 
     db_vault.title = vault.title
     db_vault.privacy = vault.privacy
+    db_vault.layout = vault.layout
 
     try:
         with driver.session() as session:
@@ -156,7 +157,6 @@ def react_to_vault(
 
         db.commit()
     except Exception as e:
-        print(e)
         raise HTTPException(status_code=500, detail="Internal error")
     return {
         "type": reaction.type,
