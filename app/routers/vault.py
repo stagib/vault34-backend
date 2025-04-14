@@ -5,7 +5,7 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.database import driver, get_db
-from app.models import Post, Vault, VaultPost, Reaction
+from app.models import Post, Vault, VaultPost
 from app.schemas.vault import VaultBase, VaultPostBase, VaultResponse
 from app.schemas.reaction import ReactionBase
 from app.types import PrivacyType

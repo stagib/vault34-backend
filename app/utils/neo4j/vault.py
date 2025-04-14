@@ -82,3 +82,37 @@ def create_reaction_(tx: Transaction, user_id: int, vault_id: int, type: str):
     ).single()
 
     return results.get("type") if results else None
+
+
+def invite_user_(tx: Transaction, user_id: int, vault_id: int):
+    tx.run(
+        """
+            MATCH (u:User {id: $user_id}), (v:Vault {id: $vault_id})
+            MERGE (v)-[:INVITED]->(u)
+        """,
+        user_id=user_id,
+        vault_id=vault_id,
+    )
+
+
+def accept_invite(tx: Transaction, user_id: int, vault_id: int):
+    tx.run(
+        """
+            MATCH (u:User {id: $user_id})-[i:INVITED]->(v:Vault {id: $vault_id})
+            DELETE i
+            MERGE (u)-[:JOINED]->(v)
+        """,
+        user_id=user_id,
+        vault_id=vault_id,
+    )
+
+
+def decline_invite(tx: Transaction, user_id: int, vault_id: int):
+    tx.run(
+        """
+            MATCH (:User {id: $user_id})-[i:INVITED]->(:Vault {id: $vault_id})
+            DELETE i
+        """,
+        user_id=user_id,
+        vault_id=vault_id,
+    )
