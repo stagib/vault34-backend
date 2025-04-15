@@ -36,8 +36,6 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
                 rating=post.rating,
                 tags=post.tags,
                 source=post.source,
-                score=post.score,
-                likes=post.score,
                 embedding=post.embedding,
             )
 
