@@ -1,15 +1,24 @@
 from datetime import datetime
 
 from pydantic import BaseModel, Field
+from typing import Optional
 
-from app.schemas.post import PostBase
+from app.schemas.post import PostBase, PostResponse
 from app.schemas.user import UserBase
 from app.types import PrivacyType
 
 
 class VaultPostBase(BaseModel):
     id: int
+    vault_id: int
+    index: int
     post: PostBase
+
+
+class EntryResponse(BaseModel):
+    id: int
+    total: int
+    post: PostResponse
 
 
 class VaultBase(BaseModel):

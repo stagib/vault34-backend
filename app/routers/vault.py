@@ -1,12 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
 from app.database import driver, get_db
 from app.models import Post, Vault, VaultPost
-from app.schemas.vault import VaultBase, VaultPostBase, VaultResponse
+from app.schemas.vault import (
+    VaultBase,
+    VaultPostBase,
+    VaultResponse,
+    EntryResponse,
+)
 from app.schemas.reaction import ReactionBase
 from app.types import PrivacyType
 from app.utils import (
@@ -211,14 +216,24 @@ def add_post_to_vault(
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
+    index = 0
+    previous_index = (
+        db.query(func.max(VaultPost.index))
+        .filter(VaultPost.vault_id == vault.id)
+        .scalar()
+    )
+    if previous_index is not None:
+        index = previous_index + 1
+
+    new_entry = VaultPost(vault_id=vault.id, post_id=post.id, index=index)
+    post.saves += 1
+    post.score = calculate_post_score(post)
+    vault.post_count += 1
+    vault.previews = add_item_to_string(
+        vault.previews, post.preview_url, limit=3
+    )
+
     try:
-        post.saves += 1
-        post.score = calculate_post_score(post)
-        vault.post_count += 1
-        vault.previews = add_item_to_string(
-            vault.previews, post.preview_url, limit=3
-        )
-        new_entry = VaultPost(vault_id=vault.id, post_id=post.id)
         db.add(new_entry)
 
         with driver.session() as session:
@@ -249,17 +264,17 @@ def remove_post_from_vault(
     if not vault:
         raise HTTPException(status_code=404, detail="Vault not found")
 
-    post_entry = db.get(VaultPost, entry_id)
-    if not post_entry:
+    vault_post = db.get(VaultPost, entry_id)
+    if not vault_post:
         raise HTTPException(status_code=404, detail="Entry not found")
 
     try:
         with driver.session() as session:
-            session.execute_write(remove_post_, vault.id, post_entry.post_id)
+            session.execute_write(remove_post_, vault.id, vault_post.post_id)
 
-        post_entry.post.saves -= 1
+        vault_post.post.saves -= 1
         vault.post_count -= 1
-        db.delete(post_entry)
+        db.delete(vault_post)
         db.commit()
     except Exception:
         db.rollback()

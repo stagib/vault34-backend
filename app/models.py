@@ -38,12 +38,17 @@ class VaultPost(Base):
     date_created = Column(
         DateTime(timezone=True), default=datetime.now(timezone.utc)
     )
-
+    index = Column(Integer, default=0, nullable=False)
     vault_id = Column(Integer, ForeignKey("vaults.id"), nullable=False)
     post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
 
     vault = relationship("Vault", back_populates="vault_posts")
     post = relationship("Post", backref="vault_post")
+
+    __table_args__ = (
+        Index("ix_post_id", "post_id"),
+        Index("ix_vault_id", "vault_id"),
+    )
 
 
 class Post(Base):
