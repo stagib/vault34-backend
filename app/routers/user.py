@@ -5,6 +5,7 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.database import driver, get_db
+from app.database.neo4j import create_user_, follow_user_, unfollow_user_
 from app.models import User, Vault
 from app.schemas.user import UserCreate, UserResponse
 from app.schemas.vault import VaultResponse
@@ -15,7 +16,6 @@ from app.utils.auth import (
     hash_password,
     verify_password,
 )
-from app.utils.neo4j.user import *
 
 router = APIRouter(tags=["User"])
 

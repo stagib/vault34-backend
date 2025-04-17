@@ -5,13 +5,9 @@ from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
 from app.database import driver, get_db
+from app.database.neo4j import *
 from app.models import Post, Vault, VaultPost
-from app.schemas.vault import (
-    VaultBase,
-    VaultPostBase,
-    VaultResponse,
-    EntryResponse,
-)
+from app.schemas.vault import VaultBase, VaultPostBase, VaultResponse
 from app.schemas.reaction import ReactionBase
 from app.types import PrivacyType
 from app.utils import (
@@ -20,7 +16,6 @@ from app.utils import (
     update_reaction_counter,
 )
 from app.utils.auth import get_user
-from app.utils.neo4j.vault import *
 
 router = APIRouter(tags=["Vault"])
 

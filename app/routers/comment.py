@@ -5,14 +5,18 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.database import driver, get_db
+from app.database.neo4j import (
+    update_post_,
+    create_comment_,
+    delete_comment_,
+    create_reaction_,
+)
 from app.models import Comment, Post, Reaction
 from app.schemas.comment import CommentCreate, CommentResponse
 from app.schemas.reaction import ReactionBase
 from app.types import ReactionType
 from app.utils import calculate_post_score
 from app.utils.auth import get_user
-from app.utils.neo4j.comment import *
-from app.utils.neo4j.post import update_post_
 
 router = APIRouter(tags=["Comment"])
 

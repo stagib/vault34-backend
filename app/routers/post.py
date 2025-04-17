@@ -6,13 +6,13 @@ from sqlalchemy import and_, desc
 from sqlalchemy.orm import Session
 
 from app.database import driver, get_db
+from app.database.neo4j import create_post_, create_reaction_
 from app.models import Post, Reaction, SearchQuery
 from app.schemas.post import PostBase, PostCreate, PostResponse
 from app.schemas.reaction import ReactionBase
 from app.types import OrderType, RatingType, ReactionType
 from app.utils import add_item_to_string
 from app.utils.auth import get_user
-from app.utils.neo4j.post import *
 
 router = APIRouter(tags=["Post"])
 
