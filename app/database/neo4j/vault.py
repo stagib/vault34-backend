@@ -1,5 +1,6 @@
 from neo4j import Transaction
 
+from app.database import driver
 from app.models import Vault
 
 
@@ -82,6 +83,19 @@ def create_reaction_(tx: Transaction, user_id: int, vault_id: int, type: str):
     ).single()
 
     return results.get("type") if results else None
+
+
+def get_user_reaction_(user_id: int, vault_id):
+    with driver.session() as session:
+        result = session.run(
+            """
+            MATCH (:User {id: $user_id})-[r:REACTED]->(:Vault {id: $vault_id})
+            RETURN r.type AS type
+        """,
+            user_id=user_id,
+            vault_id=vault_id,
+        ).single()
+        return result["type"] if result else "none"
 
 
 def invite_user_(tx: Transaction, user_id: int, vault_id: int):

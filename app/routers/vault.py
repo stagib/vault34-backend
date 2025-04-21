@@ -68,6 +68,9 @@ def get_vault(
     if vault.privacy == PrivacyType.PRIVATE:
         if not user or user.id != vault.user_id:
             raise HTTPException(status_code=401, detail="Not authenticated")
+    if user:
+        user_reaction = get_user_reaction_(user.id, vault_id)
+        vault.user_reaction = user_reaction
     return vault
 
 

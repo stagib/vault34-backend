@@ -5,7 +5,7 @@ from typing import Optional
 
 from app.schemas.post import PostBase, PostResponse
 from app.schemas.user import UserBase
-from app.types import PrivacyType
+from app.types import PrivacyType, ReactionType
 
 
 class VaultPostBase(BaseModel):
@@ -38,3 +38,4 @@ class VaultResponse(BaseModel):
     dislikes: int
     user: UserBase
     previews: str
+    user_reaction: ReactionType = ReactionType.NONE
