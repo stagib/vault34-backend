@@ -77,8 +77,8 @@ def search_posts(
     return paginated_posts
 
 
-@router.get("/search/suggestions", response_model=list[SearchResponse])
-def get_suggestions(
+@router.get("/searches", response_model=list[SearchResponse])
+def get_searches(
     query: str = Query(None),
     db: Session = Depends(get_db),
 ):
