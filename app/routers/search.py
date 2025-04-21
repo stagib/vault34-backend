@@ -10,6 +10,7 @@ from app.database import get_db
 from app.database.neo4j import log_search_
 from app.models import Post, SearchQuery
 from app.schemas.post import PostBase
+from app.schemas.search import SearchResponse
 from app.types import OrderType, RatingType
 from app.utils.auth import get_user
 
@@ -74,3 +75,16 @@ def search_posts(
     posts = posts.limit(1000)
     paginated_posts = paginate(posts)
     return paginated_posts
+
+
+@router.get("/search/suggestions", response_model=list[SearchResponse])
+def get_suggestions(
+    query: str = Query(None),
+    db: Session = Depends(get_db),
+):
+    searches = db.query(SearchQuery).order_by(desc(SearchQuery.count))
+
+    if query:
+        searches = searches.filter(SearchQuery.query.ilike(f"{query}%"))
+    searches = searches.limit(8)
+    return searches

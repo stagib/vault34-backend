@@ -148,4 +148,4 @@ class Reaction(Base):
 class SearchQuery(Base):
     __tablename__ = "search_queries"
     query = Column(String, primary_key=True)
-    count = Column(Integer, default=1)
+    count = Column(Integer, default=1, index=True)
