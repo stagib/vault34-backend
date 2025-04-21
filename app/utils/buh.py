@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.models import Post, Reaction
+from app.models import Post
 from app.types import ReactionType
 
 

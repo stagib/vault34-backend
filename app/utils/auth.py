@@ -57,3 +57,9 @@ def get_user(
         return user
     except jwt.InvalidTokenError:
         return None
+
+
+def get_search_id(search_id: Annotated[str | None, Cookie()] = None):
+    if not search_id:
+        return None
+    return search_id

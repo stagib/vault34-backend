@@ -10,13 +10,14 @@ from app.database.neo4j import (
     create_comment_,
     delete_comment_,
     create_reaction_,
+    log_search_click_,
 )
 from app.models import Comment, Post, Reaction
 from app.schemas.comment import CommentCreate, CommentResponse
 from app.schemas.reaction import ReactionBase
 from app.types import ReactionType
 from app.utils import calculate_post_score
-from app.utils.auth import get_user
+from app.utils.auth import get_user, get_search_id
 
 router = APIRouter(tags=["Comment"])
 
@@ -24,6 +25,7 @@ router = APIRouter(tags=["Comment"])
 @router.get("/posts/{post_id}/comments", response_model=Page[CommentResponse])
 def get_comments(
     post_id: int,
+    search_id=Depends(get_search_id),
     user: dict = Depends(get_user),
     db: Session = Depends(get_db),
 ):
@@ -36,6 +38,7 @@ def get_comments(
     )
 
     if user:
+        log_search_click_(search_id, post_id)
         comment_ids = [comment.id for comment in paginated_comments.items]
         reactions = (
             db.query(Reaction)

@@ -1,16 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 import numpy
-from sqlalchemy import and_, desc
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.database import driver, get_db
 from app.database.neo4j import create_post_, create_reaction_
-from app.models import Post, Reaction, SearchQuery
+from app.models import Post, Reaction
 from app.schemas.post import PostBase, PostCreate, PostResponse
 from app.schemas.reaction import ReactionBase
-from app.types import OrderType, RatingType, ReactionType
+from app.types import ReactionType
 from app.utils import add_item_to_string
 from app.utils.auth import get_user
 
@@ -53,48 +53,6 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
     return {"detail": f"Post {post.post_id} added"}
 
 
-@router.get("/posts", response_model=Page[PostBase])
-def get_posts(
-    query: str = Query(None),
-    rating: RatingType = Query(RatingType.EXPLICIT),
-    order: OrderType = Query(OrderType.TRENDING),
-    db: Session = Depends(get_db),
-):
-    posts = db.query(Post).order_by(desc(Post.score))
-
-    if order == OrderType.TRENDING:
-        posts = posts.order_by(desc(Post.score))
-    elif order == OrderType.LIKES:
-        posts = posts.order_by(desc(Post.likes))
-    elif order == OrderType.views:
-        posts = posts.order_by(desc(Post.views))
-    elif order == OrderType.NEWEST:
-        posts = posts.order_by(desc(Post.date_created))
-    elif order == OrderType.OLDEST:
-        posts = posts.order_by(Post.date_created)
-
-    if rating == RatingType.QUESTIONABLE:
-        posts = posts.filter(Post.rating == RatingType.QUESTIONABLE.value)
-
-    if query:
-        db_query = db.get(SearchQuery, query)
-        if db_query:
-            db_query.count += 1
-        else:
-            new_query = SearchQuery(query=query)
-            db.add(new_query)
-        db.commit()
-
-        words = query.lower().split()
-        words = [word.strip() for word in words]
-        conditions = [Post.tags.ilike(f"%{word}%") for word in words]
-        posts = posts.filter(and_(*conditions))
-
-    posts = posts.limit(1000)
-    paginated_posts = paginate(posts)
-    return paginated_posts
-
-
 @router.get("/posts/recommend", response_model=Page[PostBase])
 def get_recommendation(
     user: dict = Depends(get_user),
@@ -112,7 +70,9 @@ def get_recommendation(
 
 @router.get("/posts/{post_id}", response_model=PostResponse)
 def get_post(
-    post_id: int, user: dict = Depends(get_user), db: Session = Depends(get_db)
+    post_id: int,
+    user: dict = Depends(get_user),
+    db: Session = Depends(get_db),
 ):
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
