@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from fastapi import APIRouter, Depends, Query, Response
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
@@ -14,8 +16,38 @@ from app.utils.auth import get_user
 router = APIRouter(tags=["Search"])
 
 
+def order_posts(posts, order):
+    if order == OrderType.TRENDING:
+        p = posts.order_by(desc(Post.score))
+    elif order == OrderType.LIKES:
+        p = posts.order_by(desc(Post.likes))
+    elif order == OrderType.NEWEST:
+        p = posts.order_by(desc(Post.date_created))
+    elif order == OrderType.OLDEST:
+        p = posts.order_by(Post.date_created)
+    return p
+
+
+def filter_posts(posts, query):
+    words = query.lower().split()
+    words = [word.strip() for word in words]
+    conditions = [Post.tags.ilike(f"%{word}%") for word in words]
+    p = posts.filter(and_(*conditions))
+    return p
+
+
+def update_search_count(db: Session, query: str):
+    db_query = db.get(SearchQuery, query)
+    if db_query:
+        db_query.count += 1
+    else:
+        new_query = SearchQuery(query=query)
+        db.add(new_query)
+    db.commit()
+
+
 @router.get("/posts", response_model=Page[PostBase])
-def get_posts(
+def search_posts(
     response: Response,
     query: str = Query(None),
     rating: RatingType = Query(RatingType.EXPLICIT),
@@ -23,38 +55,21 @@ def get_posts(
     user: dict = Depends(get_user),
     db: Session = Depends(get_db),
 ):
-    posts = db.query(Post).order_by(desc(Post.score))
-
-    if order == OrderType.TRENDING:
-        posts = posts.order_by(desc(Post.score))
-    elif order == OrderType.LIKES:
-        posts = posts.order_by(desc(Post.likes))
-    elif order == OrderType.views:
-        posts = posts.order_by(desc(Post.views))
-    elif order == OrderType.NEWEST:
-        posts = posts.order_by(desc(Post.date_created))
-    elif order == OrderType.OLDEST:
-        posts = posts.order_by(Post.date_created)
+    posts = db.query(Post)
+    posts = order_posts(posts, order)
 
     if rating == RatingType.QUESTIONABLE:
         posts = posts.filter(Post.rating == RatingType.QUESTIONABLE.value)
 
     if query:
-        db_query = db.get(SearchQuery, query)
-        if db_query:
-            db_query.count += 1
-        else:
-            new_query = SearchQuery(query=query)
-            db.add(new_query)
-        db.commit()
-        search_id = log_search_(query, user)
+        search_id = str(uuid4())
+        posts = filter_posts(posts, query)
+        update_search_count(db, query)
+        log_search_(search_id, query, user)
+
         response.set_cookie(
             key="search_id", value=search_id, httponly=True, samesite="lax"
         )
-        words = query.lower().split()
-        words = [word.strip() for word in words]
-        conditions = [Post.tags.ilike(f"%{word}%") for word in words]
-        posts = posts.filter(and_(*conditions))
 
     posts = posts.limit(1000)
     paginated_posts = paginate(posts)

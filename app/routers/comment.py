@@ -4,14 +4,9 @@ from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from app.database import driver, get_db
-from app.database.neo4j import (
-    update_post_,
-    create_comment_,
-    delete_comment_,
-    create_reaction_,
-    log_search_click_,
-)
+from app.database import get_db
+from app.database.neo4j import log_search_click_
+
 from app.models import Comment, Post, Reaction
 from app.schemas.comment import CommentCreate, CommentResponse
 from app.schemas.reaction import ReactionBase
@@ -61,8 +56,6 @@ def get_comments(
     db_post.views += 1
 
     try:
-        with driver.session() as session:
-            session.execute_write(update_post_, db_post)
         db.commit()
     except Exception:
         raise HTTPException(status_code=500, detail="Internal error")
@@ -90,11 +83,6 @@ def create_comment(
 
     try:
         db.add(new_comment)
-        db.flush()
-
-        with driver.session() as session:
-            session.execute_write(create_comment_, new_comment)
-
         db.commit()
     except Exception as e:
         db.rollback()
@@ -126,9 +114,6 @@ def delete_comment(
 
     comment.post.comment_count -= 1
     try:
-        with driver.session() as session:
-            session.execute_write(delete_comment_, comment.id)
-
         db.delete(comment)
         db.commit()
     except Exception:
@@ -198,12 +183,6 @@ def react_to_comment(
 
     try:
         add_reaction(db_reaction, reaction, comment, user, db)
-
-        with driver.session() as session:
-            session.execute_write(
-                create_reaction_, user.id, comment.id, reaction.type.value
-            )
-
         db.commit()
     except Exception:
         db.rollback()

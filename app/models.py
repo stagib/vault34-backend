@@ -80,7 +80,7 @@ class Post(Base):
 
     __table_args__ = (
         Index("ix_post_score_desc", score.desc()),
-        Index("ix_posts_date_created", "date_created"),
+        Index("ix_post_date_created", "date_created"),
     )
 
 
