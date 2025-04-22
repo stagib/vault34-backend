@@ -4,6 +4,55 @@ from app.database import driver
 from app.models import Vault
 
 
+def get_user_vaults_(tx: Transaction, user_id: int, limit: int = 24):
+    results = tx.run(
+        """
+        MATCH (:User {id: $user_id})-[:CREATED]->(v:Vault)
+        RETURN v.id AS vault_id
+        LIMIT $limit
+    """,
+        user_id=user_id,
+        limit=limit,
+    )
+    return [record["vault_id"] for record in results]
+
+
+def get_reacted_vaults_(tx: Transaction, user_id: int, limit: int = 10):
+    results = tx.run(
+        """
+        MATCH (:User {id: $user_id})-[:REACTED]->(v:Vault)
+        RETURN v.id AS vault_id
+        LIMIT $limit
+    """,
+        user_id=user_id,
+        limit=limit,
+    )
+    return [record["vault_id"] for record in results]
+
+
+def get_connected_vaults_(tx: Transaction, vault_ids: list[int]):
+    results = tx.run(
+        """
+        // Depth 1
+        MATCH (v1:Vault)-[:CONTAINS]->(:Post)<-[:CONTAINS]-(v2:Vault)
+        WHERE v1.id IN $vault_ids AND v1 <> v2
+        RETURN v2.id AS vault_id
+        LIMIT 10
+
+        UNION
+
+        // Depth 2
+        MATCH (v1:Vault)-[:CONTAINS]->(:Post)<-[:CONTAINS]-(v2:Vault),
+        (v2)-[:CONTAINS]->(:Post)<-[:CONTAINS]-(v3:Vault)
+        WHERE v1.id IN $vault_ids AND v1 <> v2 AND v1 <> v3 AND v2 <> v3
+        RETURN v3.id AS vault_id
+        LIMIT 5
+    """,
+        vault_ids=vault_ids,
+    )
+    return [record["vault_id"] for record in results]
+
+
 def create_vault_(tx: Transaction, vault: Vault):
     tx.run(
         """
@@ -12,6 +61,7 @@ def create_vault_(tx: Transaction, vault: Vault):
         SET v.date_created = datetime($date_created)
         SET v.title = $title
         SET v.score = $score
+        SET v.privacy = $privacy
         MERGE (u)-[:CREATED]->(v)
     """,
         user_id=vault.user_id,
@@ -19,6 +69,7 @@ def create_vault_(tx: Transaction, vault: Vault):
         date_created=vault.date_created,
         title=vault.title,
         score=vault.likes + vault.dislikes,
+        privacy=vault.privacy.value,
     )
 
 
@@ -28,10 +79,12 @@ def update_vault_(tx: Transaction, vault: Vault):
         MATCH (v:Vault {id: $id}) 
         SET v.title = $title
         SET v.score = $score
+        SET v.privacy = $privacy
     """,
         id=vault.id,
         title=vault.title,
         score=vault.likes + vault.dislikes,
+        privacy=vault.privacy.value,
     )
 
 
