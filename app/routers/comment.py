@@ -6,12 +6,10 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.database.neo4j import log_search_click_
-
 from app.models import Comment, Post, Reaction
 from app.schemas.comment import CommentCreate, CommentResponse
 from app.schemas.reaction import ReactionBase
 from app.types import ReactionType
-from app.utils import calculate_post_score
 from app.utils.auth import get_user, get_search_id
 
 router = APIRouter(tags=["Comment"])
@@ -51,14 +49,6 @@ def get_comments(
             comment.user_reaction = ReactionType.NONE
             if reactions_map.get(comment.id):
                 comment.user_reaction = reactions_map.get(comment.id)
-
-    db_post.score = calculate_post_score(db_post)
-    db_post.views += 1
-
-    try:
-        db.commit()
-    except Exception:
-        raise HTTPException(status_code=500, detail="Internal error")
     return paginated_comments
 
 

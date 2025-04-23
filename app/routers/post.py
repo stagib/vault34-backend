@@ -11,7 +11,7 @@ from app.models import Post, Reaction
 from app.schemas.post import PostBase, PostCreate, PostResponse
 from app.schemas.reaction import ReactionBase
 from app.types import ReactionType
-from app.utils import add_item_to_string
+from app.utils import add_item_to_string, calculate_post_score
 from app.utils.auth import get_user
 
 router = APIRouter(tags=["Post"])
@@ -89,6 +89,25 @@ def get_post(
         db.commit()
 
     return post
+
+
+@router.put("/posts/{post_id}")
+def update_post(
+    post_id: int,
+    db: Session = Depends(get_db),
+):
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    post.score = calculate_post_score(post)
+    post.views += 1  # will change later
+
+    try:
+        db.commit()
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal error")
+    return {"detail"}
 
 
 @router.get("/posts/{post_id}/recommend", response_model=Page[PostBase])

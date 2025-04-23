@@ -1,5 +1,6 @@
 from neo4j import Transaction
 
+from app.database import driver
 from app.models import Post
 
 
@@ -38,3 +39,21 @@ def create_reaction_(tx: Transaction, user_id: int, post_id: int, type: str):
         post_id=post_id,
         type=type,
     )
+
+
+def get_top_tags_(post_id):
+    def get_top_tags(tx: Transaction, post_id: int):
+        results = tx.run(
+            """
+            MATCH (s:Search)-[c:CLICKED]-(:Post {id: $post_id})
+            RETURN s.query AS query
+            ORDER BY c.count DESC
+            LIMIT 5
+        """,
+            post_id=post_id,
+        )
+        return [record["query"] for record in results]
+
+    with driver.session() as session:
+        results = session.execute_read(get_top_tags, post_id)
+        return results
