@@ -27,35 +27,31 @@ def calculate_post_score(post: Post):
     hours_since = (now - post.date_created).total_seconds() / 3600
     reactions = post.likes + post.dislikes
     score = (
-        reactions
-        + post.comment_count * 2
-        + post.saves * 3
-        + post.views * 0.1
-        + post.score
+        reactions + post.comment_count * 2 + post.saves * 3 + post.score
     ) / (hours_since + 1) ** 1.5
     return score
 
 
 def update_reaction_counter(
     model,
-    db_reaction,
-    reaction,
+    db_reaction: ReactionType,
+    reaction: ReactionType,
 ):
     if db_reaction:
-        if db_reaction == reaction.type.value:
+        if db_reaction == reaction:
             return
 
-        if db_reaction == ReactionType.LIKE.value:
+        if db_reaction == ReactionType.LIKE:
             model.likes -= 1
-        elif db_reaction == ReactionType.DISLIKE.value:
+        elif db_reaction == ReactionType.DISLIKE:
             model.dislikes -= 1
 
-        if reaction.type == ReactionType.LIKE:
+        if reaction == ReactionType.LIKE:
             model.likes += 1
-        elif reaction.type == ReactionType.DISLIKE:
+        elif reaction == ReactionType.DISLIKE:
             model.dislikes += 1
     else:
-        if reaction.type == ReactionType.LIKE:
+        if reaction == ReactionType.LIKE:
             model.likes += 1
-        elif reaction.type == ReactionType.DISLIKE:
+        elif reaction == ReactionType.DISLIKE:
             model.dislikes += 1

@@ -14,13 +14,11 @@ class PostBase(BaseModel):
 class PostResponse(BaseModel):
     id: int
     date_created: datetime
-    post_id: int
     preview_url: str
     sample_url: str
     file_url: str
-    owner: str
+    title: str
     rating: str
-    tags: str
     score: float
     likes: int
     dislikes: int

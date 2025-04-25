@@ -1,16 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import desc
+from sqlalchemy import desc, Select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.database.neo4j import log_search_click_
 from app.models import Comment, Post, Reaction
 from app.schemas.comment import CommentCreate, CommentResponse
 from app.schemas.reaction import ReactionBase
-from app.types import ReactionType
-from app.utils.auth import get_user, get_search_id
+from app.types import ReactionType, TargetType
+from app.utils import update_reaction_counter
+from app.utils.auth import get_user
 
 router = APIRouter(tags=["Comment"])
 
@@ -18,11 +18,10 @@ router = APIRouter(tags=["Comment"])
 @router.get("/posts/{post_id}/comments", response_model=Page[CommentResponse])
 def get_comments(
     post_id: int,
-    search_id=Depends(get_search_id),
     user: dict = Depends(get_user),
     db: Session = Depends(get_db),
 ):
-    db_post = db.query(Post).filter(Post.id == post_id).first()
+    db_post = db.get(Post, post_id)
     if not db_post:
         raise HTTPException(status_code=404, detail="Post not found")
 
@@ -31,19 +30,19 @@ def get_comments(
     )
 
     if user:
-        log_search_click_(search_id, post_id)
         comment_ids = [comment.id for comment in paginated_comments.items]
         reactions = (
             db.query(Reaction)
             .filter(
-                Reaction.comment_id.in_(comment_ids),
                 Reaction.user_id == user.id,
+                Reaction.target_type == TargetType.COMMENT,
+                Reaction.target_id.in_(comment_ids),
             )
             .all()
         )
 
         reactions_map = {
-            reaction.comment_id: reaction.type for reaction in reactions
+            reaction.target_id: reaction.type for reaction in reactions
         }
         for comment in paginated_comments.items:
             comment.user_reaction = ReactionType.NONE
@@ -62,7 +61,7 @@ def create_comment(
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    post = db.query(Post).filter(Post.id == post_id).first()
+    post = db.get(Post, post_id)
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
@@ -74,7 +73,7 @@ def create_comment(
     try:
         db.add(new_comment)
         db.commit()
-    except Exception as e:
+    except Exception:
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal error")
     return new_comment
@@ -112,40 +111,6 @@ def delete_comment(
     return {"detail": "Removed comment"}
 
 
-def add_reaction(
-    db_reaction: Reaction,
-    reaction: Reaction,
-    comment: Comment,
-    user: dict,
-    db: Session,
-):
-    if db_reaction:
-        if db_reaction.type == reaction.type:
-            return
-
-        if db_reaction.type == ReactionType.LIKE:
-            comment.likes -= 1
-        elif db_reaction.type == ReactionType.DISLIKE:
-            comment.dislikes -= 1
-
-        if reaction.type == ReactionType.LIKE:
-            comment.likes += 1
-        elif reaction.type == ReactionType.DISLIKE:
-            comment.dislikes += 1
-
-        db_reaction.type = reaction.type
-    else:
-        if reaction.type == ReactionType.LIKE:
-            comment.likes += 1
-        elif reaction.type == ReactionType.DISLIKE:
-            comment.dislikes += 1
-
-        new_reaction = Reaction(
-            user_id=user.id, comment_id=comment.id, type=reaction.type
-        )
-        db.add(new_reaction)
-
-
 @router.post("/posts/{post_id}/comments/{comment_id}/reactions")
 def react_to_comment(
     post_id: int,
@@ -154,31 +119,30 @@ def react_to_comment(
     user: dict = Depends(get_user),
     db: Session = Depends(get_db),
 ):
-    comment = (
-        db.query(Comment)
-        .filter(Comment.post_id == post_id, Comment.id == comment_id)
-        .first()
-    )
+    comment = db.get(Comment, comment_id)
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")
 
-    db_reaction = (
-        db.query(Reaction)
-        .filter(
-            Reaction.comment_id == comment.id,
-            Reaction.user_id == user.id,
-        )
-        .first()
+    stmt = Select(Reaction).where(
+        Reaction.target_type == TargetType.COMMENT,
+        Reaction.target_id == comment_id,
+        Reaction.user_id == user.id,
     )
+    db_reaction = db.execute(stmt).scalar_one_or_none()
+    if not db_reaction:
+        new_reaction = Reaction(
+            target_type=TargetType.COMMENT,
+            target_id=comment_id,
+            user_id=user.id,
+            type=reaction.type,
+        )
+        db.add(new_reaction)
+    else:
+        db_reaction.type = reaction.type
 
     try:
-        add_reaction(db_reaction, reaction, comment, user, db)
         db.commit()
     except Exception:
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal error")
-    return {
-        "type": reaction.type,
-        "likes": comment.likes,
-        "dislikes": comment.dislikes,
-    }
+    return {"detail": "added reaction"}

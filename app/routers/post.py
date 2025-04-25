@@ -1,18 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi_pagination import Page
-from fastapi_pagination.ext.sqlalchemy import paginate
+from datetime import datetime, timezone, timedelta
+from fastapi import APIRouter, Depends, HTTPException, Query
 import numpy
-from sqlalchemy import desc
+from sqlalchemy import desc, Select
 from sqlalchemy.orm import Session
 
 from app.database import driver, get_db
-from app.database.neo4j import create_post_, create_reaction_
+from app.database.neo4j import (
+    create_posts_,
+    create_reaction_,
+    log_search_click_,
+)
 from app.models import Post, Reaction
 from app.schemas.post import PostBase, PostCreate, PostResponse
 from app.schemas.reaction import ReactionBase
-from app.types import ReactionType
-from app.utils import add_item_to_string, calculate_post_score
-from app.utils.auth import get_user
+from app.types import RatingType, TargetType
+from app.utils import calculate_post_score
+
+from app.utils.auth import get_user, get_search_id
 
 router = APIRouter(tags=["Post"])
 
@@ -20,52 +24,62 @@ router = APIRouter(tags=["Post"])
 @router.post("/posts")
 def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
     with driver.session() as session:
+        post_objs = []
+        neo4j_data = []
+
         for post in posts:
-            db_post = (
-                db.query(Post).filter(Post.post_id == post.post_id).first()
-            )
-            if db_post:
-                return {"detail": f"Post {db_post.post_id} already exists"}
+            rating = RatingType.EXPLICIT
+            if post.rating == RatingType.QUESTIONABLE.value:
+                rating = RatingType.QUESTIONABLE
 
             new_post = Post(
-                post_id=post.post_id,
+                title=post.tags,
                 preview_url=post.preview_url,
                 sample_url=post.sample_url,
                 file_url=post.file_url,
-                owner=post.owner,
-                rating=post.rating,
+                rating=rating,
                 tags=post.tags,
                 source=post.source,
                 embedding=post.embedding,
             )
+            post_objs.append(new_post)
 
-            try:
-                db.add(new_post)
-                db.flush()
+        try:
+            db.add_all(post_objs)
+            db.flush()
+            for post in post_objs:
+                data = {
+                    "id": post.id,
+                    "date_created": post.date_created,
+                    "score": post.score,
+                }
+                neo4j_data.append(data)
 
-                session.execute_write(create_post_, new_post)
+            session.execute_write(create_posts_, neo4j_data)
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise HTTPException(status_code=500, detail="Internal error")
 
-                db.commit()
-            except Exception:
-                db.rollback()
-                raise HTTPException(status_code=500, detail="Internal error")
-
-    return {"detail": f"Post {post.post_id} added"}
+    return {"detail": "Added posts"}
 
 
-@router.get("/posts/recommend", response_model=Page[PostBase])
+@router.get("/posts/recommend", response_model=list[PostBase])
 def get_recommendation(
-    user: dict = Depends(get_user),
+    page: int = Query(1, ge=1, le=100),
+    size: int = Query(25, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
-    posts = db.query(Post).order_by(desc(Post.score))
-    if user and user.history:
-        history = list(map(int, user.history.strip().split()))
-        posts = posts.filter(~Post.id.in_(history))
+    offset = (page - 1) * size
 
-    posts = posts.limit(1000)
-    paginated_posts = paginate(posts)
-    return paginated_posts
+    stmt = (
+        Select(Post.id, Post.sample_url, Post.preview_url)
+        .order_by(desc(Post.score))
+        .offset(offset)
+        .limit(size)
+    )
+    result = db.execute(stmt)
+    return [dict(row._mapping) for row in result.all()]
 
 
 @router.get("/posts/{post_id}", response_model=PostResponse)
@@ -74,34 +88,42 @@ def get_post(
     user: dict = Depends(get_user),
     db: Session = Depends(get_db),
 ):
-    post = db.query(Post).filter(Post.id == post_id).first()
+    post = db.get(Post, post_id)
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
     if user:
-        user_reaction = post.reactions.filter(
-            Reaction.user_id == user.id
-        ).first()
-        if user_reaction:
-            post.user_reaction = user_reaction.type
-
-        user.history = add_item_to_string(user.history, str(post_id))
-        db.commit()
-
+        stmt = Select(Reaction.type).where(
+            Reaction.target_type == TargetType.POST,
+            Reaction.target_id == post_id,
+            Reaction.user_id == user.id,
+        )
+        result = db.execute(stmt).scalar_one_or_none()
+        if result:
+            post.user_reaction = result
     return post
 
 
 @router.put("/posts/{post_id}")
 def update_post(
     post_id: int,
+    search_id=Depends(get_search_id),
+    user: dict = Depends(get_user),
     db: Session = Depends(get_db),
 ):
-    post = db.query(Post).filter(Post.id == post_id).first()
+    now = datetime.now(timezone.utc)
+    post = db.get(Post, post_id)
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
-    post.score = calculate_post_score(post)
-    post.views += 1  # will change later
+    # update every time
+    if user:
+        log_search_click_(search_id, post_id)
+
+    # update only if enough time as elapsed since last update
+    if post.last_updated + timedelta(minutes=5) < now:
+        post.score = calculate_post_score(post)
+        post.last_updated = now
 
     try:
         db.commit()
@@ -110,54 +132,29 @@ def update_post(
     return {"detail"}
 
 
-@router.get("/posts/{post_id}/recommend", response_model=Page[PostBase])
-def get_post_recommendation(post_id: int, db: Session = Depends(get_db)):
-    post = db.query(Post).filter(Post.id == post_id).first()
-    vector = numpy.array(post.embedding).tolist()
-
-    posts = (
-        db.query(Post)
-        .order_by(Post.embedding.cosine_distance(vector), desc(Post.score))
-        .filter(Post.embedding.cosine_distance(vector) > 0.05)
-        .limit(1000)
-    )
-
-    paginated_posts = paginate(posts)
-    return paginated_posts
-
-
-def add_reaction(
-    db_reaction: Reaction,
-    reaction: Reaction,
-    post: Post,
-    user: dict,
-    db: Session,
+@router.get("/posts/{post_id}/recommend", response_model=list[PostBase])
+def get_post_recommendation(
+    post_id: int,
+    page: int = Query(1, ge=1, le=100),
+    size: int = Query(25, ge=1, le=100),
+    db: Session = Depends(get_db),
 ):
-    if db_reaction:
-        if db_reaction.type == reaction.type:
-            return
+    stmt = Select(Post.embedding).where(Post.id == post_id)
+    result = db.execute(stmt).scalar_one_or_none()
+    if not result:
+        return []
 
-        if db_reaction.type == ReactionType.LIKE:
-            post.likes -= 1
-        elif db_reaction.type == ReactionType.DISLIKE:
-            post.dislikes -= 1
+    vector = numpy.array(result).tolist()
+    offset = (page - 1) * size
 
-        if reaction.type == ReactionType.LIKE:
-            post.likes += 1
-        elif reaction.type == ReactionType.DISLIKE:
-            post.dislikes += 1
-
-        db_reaction.type = reaction.type
-    else:
-        if reaction.type == ReactionType.LIKE:
-            post.likes += 1
-        elif reaction.type == ReactionType.DISLIKE:
-            post.dislikes += 1
-
-        new_reaction = Reaction(
-            user_id=user.id, post_id=post.id, type=reaction.type
-        )
-        db.add(new_reaction)
+    stmt = (
+        Select(Post.id, Post.sample_url, Post.preview_url)
+        .order_by(Post.embedding.cosine_distance(vector), desc(Post.score))
+        .offset(offset)
+        .limit(size)
+    )
+    result = db.execute(stmt)
+    return [dict(row._mapping) for row in result.all()]
 
 
 @router.post("/posts/{post_id}/reactions")
@@ -170,19 +167,29 @@ def react_to_post(
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    post = db.query(Post).filter(Post.id == post_id).first()
+    post = db.get(Post, post_id)
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
-    db_reaction = (
-        db.query(Reaction)
-        .filter(Reaction.post_id == post_id, Reaction.user_id == user.id)
-        .first()
+    stmt = Select(Reaction.type).where(
+        Reaction.target_type == TargetType.POST,
+        Reaction.target_id == post_id,
+        Reaction.user_id == user.id,
     )
 
-    try:
-        add_reaction(db_reaction, reaction, post, user, db)
+    db_reaction = db.execute(stmt).scalar_one_or_none()
+    if not db_reaction:
+        new_reaction = Reaction(
+            target_type=TargetType.POST,
+            target_id=post_id,
+            user_id=user.id,
+            type=reaction.type,
+        )
+        db.add(new_reaction)
+    else:
+        db_reaction.type = reaction.type
 
+    try:
         with driver.session() as session:
             session.execute_write(
                 create_reaction_,
@@ -190,14 +197,8 @@ def react_to_post(
                 post.id,
                 reaction.type.value,
             )
-
         db.commit()
-    except Exception as e:
+    except Exception:
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal error")
-
-    return {
-        "type": reaction.type,
-        "likes": post.likes,
-        "dislikes": post.dislikes,
-    }
+    return {"detail": "reaction added"}

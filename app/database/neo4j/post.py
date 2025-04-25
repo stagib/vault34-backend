@@ -4,15 +4,14 @@ from app.database import driver
 from app.models import Post
 
 
-def create_post_(tx: Transaction, post: Post):
+def create_posts_(tx: Transaction, posts: list[Post]):
     tx.run(
         """
-        MERGE (p:Post {id: $id}) 
-        SET p.date_created = datetime($date_created), p.score = $score 
+        UNWIND $posts AS post
+        MERGE (p:Post {id: post.id}) 
+        SET p.date_created = datetime(post.date_created), p.score = post.score 
     """,
-        id=post.id,
-        date_created=post.date_created,
-        score=post.score,
+        posts=posts,
     )
 
 

@@ -5,7 +5,7 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.database import driver, get_db
-from app.database.neo4j import create_user_, follow_user_, unfollow_user_
+from app.database.neo4j import create_user_
 from app.models import User, Vault
 from app.schemas.user import UserCreate, UserResponse
 from app.schemas.vault import VaultResponse
@@ -75,8 +75,8 @@ def logout(response: Response):
 
 
 @router.get("/users/{user_id}", response_model=UserResponse)
-def get_current_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
+def get_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
@@ -101,7 +101,7 @@ def get_user_vaults(
     return paginated_vaults
 
 
-@router.post("/users/{user_id}/followers")
+""" @router.post("/users/{user_id}/followers")
 def follow_user(
     user_id: int, user: dict = Depends(get_user), db: Session = Depends(get_db)
 ):
@@ -132,3 +132,4 @@ def unfollow_user(user_id: int, user: dict = Depends(get_user)):
     except Exception:
         raise HTTPException(status_code=500, detail="Internal error")
     return {"detail": "Unfollowed user"}
+ """

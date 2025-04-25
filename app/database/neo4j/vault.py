@@ -122,20 +122,17 @@ def remove_post_(tx: Transaction, vault_id: int, post_id: int):
 
 
 def create_reaction_(tx: Transaction, user_id: int, vault_id: int, type: str):
-    results = tx.run(
+    tx.run(
         """
-            MATCH (u:User {id: $user_id}), (v:Vault {id: $vault_id})
-            MERGE (u)-[r:REACTED]->(v)
-            WITH r, r.type AS type
-            SET r.type = $type
-            RETURN type
-        """,
+        MATCH (u:User {id: $user_id}), (v:Vault {id: $vault_id})
+        MERGE (u)-[r:REACTED]->(v)
+        WITH r, r.type AS type
+        SET r.type = $type
+    """,
         user_id=user_id,
         vault_id=vault_id,
         type=type,
-    ).single()
-
-    return results.get("type") if results else None
+    )
 
 
 def get_user_reaction_(user_id: int, vault_id):

@@ -3,15 +3,15 @@ import random
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import desc, func
+from sqlalchemy import desc, func, Select
 from sqlalchemy.orm import Session
 
 from app.database import driver, get_db
 from app.database.neo4j import *
-from app.models import Post, Vault, VaultPost
+from app.models import Post, Vault, VaultPost, Reaction
 from app.schemas.vault import VaultBase, VaultPostBase, VaultResponse
 from app.schemas.reaction import ReactionBase
-from app.types import PrivacyType
+from app.types import PrivacyType, TargetType
 from app.utils import (
     add_item_to_string,
     calculate_post_score,
@@ -91,7 +91,7 @@ def get_vault(
     user: dict = Depends(get_user),
     db: Session = Depends(get_db),
 ):
-    vault = db.query(Vault).filter(Vault.id == vault_id).first()
+    vault = db.get(Vault, vault_id)
     if not vault:
         raise HTTPException(status_code=404, detail="Vault not found")
 
@@ -99,8 +99,14 @@ def get_vault(
         if not user or user.id != vault.user_id:
             raise HTTPException(status_code=401, detail="Not authenticated")
     if user:
-        user_reaction = get_user_reaction_(user.id, vault_id)
-        vault.user_reaction = user_reaction
+        stmt = Select(Reaction.type).where(
+            Reaction.target_type == TargetType.VAULT,
+            Reaction.target_id == vault_id,
+            Reaction.user_id == user.id,
+        )
+        result = db.execute(stmt).scalar_one_or_none()
+        if result:
+            vault.user_reaction = result
     return vault
 
 
@@ -179,23 +185,34 @@ def react_to_vault(
     if not vault:
         raise HTTPException(status_code=404, detail="Vault not found")
 
+    stmt = Select(Reaction).where(
+        Reaction.target_type == TargetType.VAULT,
+        Reaction.target_id == vault_id,
+        Reaction.user_id == user.id,
+    )
+
+    db_reaction = db.execute(stmt).scalar_one_or_none()
+    if not db_reaction:
+        new_reaction = Reaction(
+            target_type=TargetType.VAULT,
+            target_id=vault_id,
+            user_id=user.id,
+            type=reaction.type,
+        )
+        db.add(new_reaction)
+    else:
+        db_reaction.type = reaction.type
+
     try:
         with driver.session() as session:
-            db_reaction = session.execute_write(
+            session.execute_write(
                 create_reaction_, user.id, vault.id, reaction.type.value
             )
 
-            update_reaction_counter(vault, db_reaction, reaction)
-            session.execute_write(update_vault_, vault)
-
         db.commit()
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Internal error")
-    return {
-        "type": reaction.type,
-        "likes": vault.likes,
-        "dislikes": vault.dislikes,
-    }
+    return {"detail": "reaction added"}
 
 
 @router.get("/vaults/{vault_id}/posts", response_model=Page[VaultPostBase])
@@ -204,7 +221,7 @@ def get_vault_posts(
     user: dict = Depends(get_user),
     db: Session = Depends(get_db),
 ):
-    vault = db.query(Vault).filter(Vault.id == vault_id).first()
+    vault = db.get(Vault, vault_id)
     if not vault:
         raise HTTPException(status_code=404, detail="Vault not found")
 

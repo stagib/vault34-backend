@@ -7,6 +7,12 @@ class ReactionType(Enum):
     NONE = "none"
 
 
+class TargetType(Enum):
+    POST = "post"
+    COMMENT = "comment"
+    VAULT = "vault"
+
+
 class PrivacyType(Enum):
     PRIVATE = "private"
     PUBLIC = "public"

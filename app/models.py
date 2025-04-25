@@ -14,11 +14,11 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from app.database import Base
-from app.types import PrivacyType, ReactionType
+from app.types import PrivacyType, ReactionType, TargetType, RatingType
 
 
 class User(Base):
-    __tablename__ = "users"
+    __tablename__ = "user"
     id = Column(Integer, primary_key=True, index=True)
     date_created = Column(
         DateTime(timezone=True), default=datetime.now(timezone.utc)
@@ -27,7 +27,6 @@ class User(Base):
     username = Column(String, nullable=False)
     password = Column(String, nullable=False)
     history = Column(String, nullable=False, default="")
-    reactions = relationship("Reaction", back_populates="user", lazy="dynamic")
     comments = relationship("Comment", back_populates="user", lazy="dynamic")
     vaults = relationship("Vault", back_populates="user", lazy="dynamic")
 
@@ -39,44 +38,44 @@ class VaultPost(Base):
         DateTime(timezone=True), default=datetime.now(timezone.utc)
     )
     index = Column(Integer, default=0, nullable=False)
-    vault_id = Column(Integer, ForeignKey("vaults.id"), nullable=False)
-    post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
+    vault_id = Column(
+        Integer, ForeignKey("vault.id"), nullable=False, index=True
+    )
+    post_id = Column(Integer, ForeignKey("post.id"), nullable=False)
 
     vault = relationship("Vault", back_populates="vault_posts")
     post = relationship("Post", backref="vault_post")
 
     __table_args__ = (
-        Index("ix_post_id", "post_id"),
-        Index("ix_vault_id", "vault_id"),
+        Index("ix_vault_post_vault_post", "post_id", "vault_id"),
     )
 
 
 class Post(Base):
-    __tablename__ = "posts"
+    __tablename__ = "post"
     id = Column(Integer, primary_key=True, index=True)
     date_created = Column(
         DateTime(timezone=True), default=datetime.now(timezone.utc)
     )
 
-    post_id = Column(Integer, unique=True, index=True)
+    title = Column(String)
     preview_url = Column(String)
     sample_url = Column(String)
     file_url = Column(String)
-    owner = Column(String)
-    rating = Column(String)
+    rating = Column(Enum(RatingType), default=RatingType.EXPLICIT)
     tags = Column(String)
     source = Column(String)
-
-    reactions = relationship("Reaction", back_populates="post", lazy="dynamic")
-    comments = relationship("Comment", back_populates="post", lazy="dynamic")
-
-    embedding = Column(Vector(512))
     likes = Column(Integer, default=0)
     dislikes = Column(Integer, default=0)
-    views = Column(Integer, default=0)
     saves = Column(Integer, default=0)
     comment_count = Column(Integer, default=0)
     score = Column(Float, default=0)
+    last_updated = Column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
+    )
+    embedding = Column(Vector(512))
+
+    comments = relationship("Comment", back_populates="post", lazy="dynamic")
 
     __table_args__ = (
         Index("ix_post_score_desc", score.desc()),
@@ -85,14 +84,15 @@ class Post(Base):
 
 
 class Vault(Base):
-    __tablename__ = "vaults"
+    __tablename__ = "vault"
     id = Column(Integer, primary_key=True, index=True)
     date_created = Column(
         DateTime(timezone=True), default=datetime.now(timezone.utc)
     )
 
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     title = Column(String, nullable=False)
+    description = Column(String)
     previews = Column(String, default="")
     post_count = Column(Integer, default=0)
     likes = Column(Integer, default=0)
@@ -109,43 +109,52 @@ class Vault(Base):
 
 
 class Comment(Base):
-    __tablename__ = "comments"
+    __tablename__ = "comment"
     id = Column(Integer, primary_key=True, index=True)
     date_created = Column(
         DateTime(timezone=True), default=datetime.now(timezone.utc)
     )
 
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    post_id = Column(Integer, ForeignKey("post.id"), nullable=False)
     content = Column(String, nullable=False)
     likes = Column(Integer, default=0)
     dislikes = Column(Integer, default=0)
 
     post = relationship("Post", back_populates="comments")
     user = relationship("User", back_populates="comments")
-    reactions = relationship(
-        "Reaction", back_populates="comment", lazy="dynamic"
-    )
 
 
 class Reaction(Base):
-    __tablename__ = "reactions"
+    __tablename__ = "reaction"
     id = Column(Integer, primary_key=True, index=True)
     date_created = Column(
         DateTime(timezone=True), default=datetime.now(timezone.utc)
     )
 
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    user = relationship("User", back_populates="reactions")
+    user_id = Column(Integer, nullable=False)
+    target_type = Column(Enum(TargetType), nullable=False)
+    target_id = Column(Integer, nullable=False)
     type = Column(Enum(ReactionType), nullable=False)
-    post_id = Column(Integer, ForeignKey("posts.id"), nullable=True)
-    comment_id = Column(Integer, ForeignKey("comments.id"), nullable=True)
 
-    post = relationship("Post", back_populates="reactions")
-    comment = relationship("Comment", back_populates="reactions")
+    __table_args__ = (
+        Index("ix_reaction_user", "user_id", "target_type", "target_id"),
+        Index("ix_reaction_date_created", "date_created"),
+    )
 
 
-class SearchQuery(Base):
-    __tablename__ = "search_queries"
-    query = Column(String, primary_key=True)
+class Search(Base):
+    __tablename__ = "search"
+    query = Column(String, primary_key=True, index=True)
     count = Column(Integer, default=1, index=True)
+
+
+class SearchLog(Base):
+    __tablename__ = "search_log"
+    id = Column(Integer, primary_key=True, index=True)
+    date_created = Column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
+    )
+    query = Column(String)
+
+    __table_args__ = (Index("ix_search_log_date_created", "date_created"),)
