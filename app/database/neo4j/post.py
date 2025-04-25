@@ -26,12 +26,12 @@ def update_post_(tx: Transaction, post: Post):
     )
 
 
-def create_reaction_(tx: Transaction, user_id: int, post_id: int, type: str):
+def react_to_post_(tx: Transaction, user_id: int, post_id: int, type: str):
     tx.run(
         """
         MATCH (u:User {id: $user_id})
         MATCH (p:Post {id: $post_id})
-        MERGE (u)-[r:REACTED]->(p)
+        MERGE (u)-[r:REACTED_TO_POST]->(p)
         SET r.type = $type
     """,
         user_id=user_id,

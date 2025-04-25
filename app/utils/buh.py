@@ -32,7 +32,7 @@ def calculate_post_score(post: Post):
     return score
 
 
-def update_reaction_counter(
+def update_reaction_count(
     model,
     db_reaction: ReactionType,
     reaction: ReactionType,

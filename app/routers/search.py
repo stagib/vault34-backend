@@ -43,7 +43,7 @@ def filter_posts(posts, query):
     words = query.lower().split()
     words = [word.strip() for word in words]
     conditions = [Post.tags.ilike(f"%{word}%") for word in words]
-    p = posts.where(and_(*conditions))
+    p = posts.filter(and_(*conditions))
     return p
 
 
@@ -57,38 +57,32 @@ def update_search_count(db: Session, query: str):
     db.commit()
 
 
-@router.get("/posts", response_model=list[PostBase])
+@router.get("/posts", response_model=Page[PostBase])
 def search_posts(
     response: Response,
-    page: int = Query(1, ge=1, le=100),
-    size: int = Query(25, ge=1, le=100),
     query: str = Query(None),
     rating: RatingType = Query(RatingType.EXPLICIT),
     order: OrderType = Query(OrderType.TRENDING),
     user: dict = Depends(get_user),
     db: Session = Depends(get_db),
 ):
-    offset = (page - 1) * size
-    stmt = Select(Post.id, Post.sample_url, Post.preview_url)
-    stmt = order_posts(stmt, order)
+    posts = db.query(Post.id, Post.sample_url, Post.preview_url)
+    posts = order_posts(posts, order)
 
     if rating == RatingType.QUESTIONABLE:
-        stmt = stmt.where(Post.rating == RatingType.QUESTIONABLE)
+        posts = posts.filter(Post.rating == RatingType.QUESTIONABLE)
 
     if query:
         normalized_query = normalize_text(query)
         search_id = str(uuid4())
-        stmt = filter_posts(stmt, normalized_query)
+        posts = filter_posts(posts, normalized_query)
         update_search_count(db, normalized_query)
         log_search_(search_id, normalized_query, user)
 
         response.set_cookie(
             key="search_id", value=search_id, httponly=True, samesite="lax"
         )
-
-    stmt = stmt.offset(offset).limit(size)
-    result = db.execute(stmt)
-    return [dict(row._mapping) for row in result.all()]
+    return paginate(posts)
 
 
 @router.get("/searches", response_model=list[SearchResponse])

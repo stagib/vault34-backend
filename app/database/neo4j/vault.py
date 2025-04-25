@@ -121,11 +121,11 @@ def remove_post_(tx: Transaction, vault_id: int, post_id: int):
     )
 
 
-def create_reaction_(tx: Transaction, user_id: int, vault_id: int, type: str):
+def react_to_vault_(tx: Transaction, user_id: int, vault_id: int, type: str):
     tx.run(
         """
         MATCH (u:User {id: $user_id}), (v:Vault {id: $vault_id})
-        MERGE (u)-[r:REACTED]->(v)
+        MERGE (u)-[r:REACTED_TO_VAULT]->(v)
         WITH r, r.type AS type
         SET r.type = $type
     """,

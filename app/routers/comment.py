@@ -9,7 +9,7 @@ from app.models import Comment, Post, Reaction
 from app.schemas.comment import CommentCreate, CommentResponse
 from app.schemas.reaction import ReactionBase
 from app.types import ReactionType, TargetType
-from app.utils import update_reaction_counter
+from app.utils import update_reaction_count
 from app.utils.auth import get_user
 
 router = APIRouter(tags=["Comment"])
@@ -45,7 +45,6 @@ def get_comments(
             reaction.target_id: reaction.type for reaction in reactions
         }
         for comment in paginated_comments.items:
-            comment.user_reaction = ReactionType.NONE
             if reactions_map.get(comment.id):
                 comment.user_reaction = reactions_map.get(comment.id)
     return paginated_comments
@@ -128,6 +127,8 @@ def react_to_comment(
         Reaction.target_id == comment_id,
         Reaction.user_id == user.id,
     )
+
+    prev_reaction = ReactionType.NONE
     db_reaction = db.execute(stmt).scalar_one_or_none()
     if not db_reaction:
         new_reaction = Reaction(
@@ -138,9 +139,11 @@ def react_to_comment(
         )
         db.add(new_reaction)
     else:
+        prev_reaction = db_reaction.type
         db_reaction.type = reaction.type
 
     try:
+        update_reaction_count(comment, prev_reaction, reaction.type)
         db.commit()
     except Exception:
         db.rollback()

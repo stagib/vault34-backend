@@ -11,11 +11,11 @@ from app.database.neo4j import *
 from app.models import Post, Vault, VaultPost, Reaction
 from app.schemas.vault import VaultBase, VaultPostBase, VaultResponse
 from app.schemas.reaction import ReactionBase
-from app.types import PrivacyType, TargetType
+from app.types import PrivacyType, TargetType, ReactionType
 from app.utils import (
     add_item_to_string,
     calculate_post_score,
-    update_reaction_counter,
+    update_reaction_count,
 )
 from app.utils.auth import get_user
 
@@ -191,6 +191,7 @@ def react_to_vault(
         Reaction.user_id == user.id,
     )
 
+    prev_reaction = ReactionType.NONE
     db_reaction = db.execute(stmt).scalar_one_or_none()
     if not db_reaction:
         new_reaction = Reaction(
@@ -201,12 +202,14 @@ def react_to_vault(
         )
         db.add(new_reaction)
     else:
+        prev_reaction = db_reaction.type
         db_reaction.type = reaction.type
 
     try:
+        update_reaction_count(vault, prev_reaction, reaction.type)
         with driver.session() as session:
             session.execute_write(
-                create_reaction_, user.id, vault.id, reaction.type.value
+                react_to_vault_, user.id, vault.id, reaction.type.value
             )
 
         db.commit()

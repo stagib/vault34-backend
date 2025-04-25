@@ -1,5 +1,7 @@
 from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlalchemy import paginate
 import numpy
 from sqlalchemy import desc, Select
 from sqlalchemy.orm import Session
@@ -7,14 +9,14 @@ from sqlalchemy.orm import Session
 from app.database import driver, get_db
 from app.database.neo4j import (
     create_posts_,
-    create_reaction_,
+    react_to_post_,
     log_search_click_,
 )
 from app.models import Post, Reaction
 from app.schemas.post import PostBase, PostCreate, PostResponse
 from app.schemas.reaction import ReactionBase
-from app.types import RatingType, TargetType
-from app.utils import calculate_post_score
+from app.types import RatingType, TargetType, ReactionType
+from app.utils import calculate_post_score, update_reaction_count
 
 from app.utils.auth import get_user, get_search_id
 
@@ -64,22 +66,14 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
     return {"detail": "Added posts"}
 
 
-@router.get("/posts/recommend", response_model=list[PostBase])
+@router.get("/posts/recommend", response_model=Page[PostBase])
 def get_recommendation(
-    page: int = Query(1, ge=1, le=100),
-    size: int = Query(25, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
-    offset = (page - 1) * size
-
-    stmt = (
-        Select(Post.id, Post.sample_url, Post.preview_url)
-        .order_by(desc(Post.score))
-        .offset(offset)
-        .limit(size)
+    posts = db.query(Post.id, Post.sample_url, Post.preview_url).order_by(
+        desc(Post.score)
     )
-    result = db.execute(stmt)
-    return [dict(row._mapping) for row in result.all()]
+    return paginate(posts)
 
 
 @router.get("/posts/{post_id}", response_model=PostResponse)
@@ -132,29 +126,20 @@ def update_post(
     return {"detail"}
 
 
-@router.get("/posts/{post_id}/recommend", response_model=list[PostBase])
+@router.get("/posts/{post_id}/recommend", response_model=Page[PostBase])
 def get_post_recommendation(
     post_id: int,
-    page: int = Query(1, ge=1, le=100),
-    size: int = Query(25, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
-    stmt = Select(Post.embedding).where(Post.id == post_id)
-    result = db.execute(stmt).scalar_one_or_none()
-    if not result:
-        return []
+    post = db.get(Post, post_id)
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
 
-    vector = numpy.array(result).tolist()
-    offset = (page - 1) * size
-
-    stmt = (
-        Select(Post.id, Post.sample_url, Post.preview_url)
-        .order_by(Post.embedding.cosine_distance(vector), desc(Post.score))
-        .offset(offset)
-        .limit(size)
+    vector = numpy.array(post.embedding).tolist()
+    posts = db.query(Post.id, Post.sample_url, Post.preview_url).order_by(
+        Post.embedding.cosine_distance(vector), desc(Post.score)
     )
-    result = db.execute(stmt)
-    return [dict(row._mapping) for row in result.all()]
+    return paginate(posts)
 
 
 @router.post("/posts/{post_id}/reactions")
@@ -177,6 +162,7 @@ def react_to_post(
         Reaction.user_id == user.id,
     )
 
+    prev_reaction = ReactionType.NONE
     db_reaction = db.execute(stmt).scalar_one_or_none()
     if not db_reaction:
         new_reaction = Reaction(
@@ -187,14 +173,16 @@ def react_to_post(
         )
         db.add(new_reaction)
     else:
+        prev_reaction = db_reaction.type
         db_reaction.type = reaction.type
 
     try:
+        update_reaction_count(post, prev_reaction, reaction.type)
         with driver.session() as session:
             session.execute_write(
-                create_reaction_,
+                react_to_post_,
                 user.id,
-                post.id,
+                post_id,
                 reaction.type.value,
             )
         db.commit()
