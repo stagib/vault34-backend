@@ -8,7 +8,7 @@ def log_search_(search_id, query, user):
         tx.run(
             """
                 MATCH (s:Search {query: $query}) 
-                MATCH (u:User {id: $user_id})
+                MATCH (u:User {user_id: $user_id})
                 MERGE (u)-[t:SEARCHED]->(s)
                 ON CREATE SET t.count = 1
                 ON MATCH SET t.count = t.count + 1
@@ -39,7 +39,7 @@ def log_search_click_(search_id, post_id):
         tx.run(
             """
                 MATCH (:User)-[t:SEARCHED {search_id: $search_id}]->(s:Search)
-                MATCH (p:Post {id: $post_id})
+                MATCH (p:Post {post_id: $post_id})
                 MERGE (s)-[c:CLICKED]->(p)
                 ON CREATE SET c.count = 1
                 ON MATCH SET c.count = c.count + 1

@@ -7,7 +7,7 @@ from app.models import Vault
 def get_user_vaults_(tx: Transaction, user_id: int, limit: int = 24):
     results = tx.run(
         """
-        MATCH (:User {id: $user_id})-[:CREATED]->(v:Vault)
+        MATCH (:User {user_id: $user_id})-[:CREATED]->(v:Vault)
         RETURN v.id AS vault_id
         LIMIT $limit
     """,
@@ -20,7 +20,7 @@ def get_user_vaults_(tx: Transaction, user_id: int, limit: int = 24):
 def get_reacted_vaults_(tx: Transaction, user_id: int, limit: int = 10):
     results = tx.run(
         """
-        MATCH (:User {id: $user_id})-[:REACTED]->(v:Vault)
+        MATCH (:User {user_id: $user_id})-[:REACTED]->(v:Vault)
         RETURN v.id AS vault_id
         LIMIT $limit
     """,
@@ -35,8 +35,8 @@ def get_connected_vaults_(tx: Transaction, vault_ids: list[int]):
         """
         // Depth 1
         MATCH (v1:Vault)-[:CONTAINS]->(:Post)<-[:CONTAINS]-(v2:Vault)
-        WHERE v1.id IN $vault_ids AND v1 <> v2
-        RETURN v2.id AS vault_id
+        WHERE v1.vault_id IN $vault_ids AND v1 <> v2
+        RETURN v2.vault_id AS vault_id
         LIMIT 10
 
         UNION
@@ -44,8 +44,8 @@ def get_connected_vaults_(tx: Transaction, vault_ids: list[int]):
         // Depth 2
         MATCH (v1:Vault)-[:CONTAINS]->(:Post)<-[:CONTAINS]-(v2:Vault),
         (v2)-[:CONTAINS]->(:Post)<-[:CONTAINS]-(v3:Vault)
-        WHERE v1.id IN $vault_ids AND v1 <> v2 AND v1 <> v3 AND v2 <> v3
-        RETURN v3.id AS vault_id
+        WHERE v1.vault_id IN $vault_ids AND v1 <> v2 AND v1 <> v3 AND v2 <> v3
+        RETURN v3.vault_id AS vault_id
         LIMIT 5
     """,
         vault_ids=vault_ids,
@@ -56,8 +56,8 @@ def get_connected_vaults_(tx: Transaction, vault_ids: list[int]):
 def create_vault_(tx: Transaction, vault: Vault):
     tx.run(
         """
-        MATCH (u:User {id: $user_id})
-        MERGE (v:Vault {id: $id}) 
+        MATCH (u:User {user_id: $user_id})
+        MERGE (v:Vault {vault_id: $id}) 
         SET v.date_created = datetime($date_created)
         SET v.title = $title
         SET v.score = $score
@@ -76,7 +76,7 @@ def create_vault_(tx: Transaction, vault: Vault):
 def update_vault_(tx: Transaction, vault: Vault):
     tx.run(
         """
-        MATCH (v:Vault {id: $id}) 
+        MATCH (v:Vault {vault_id: $id}) 
         SET v.title = $title
         SET v.score = $score
         SET v.privacy = $privacy
@@ -91,7 +91,7 @@ def update_vault_(tx: Transaction, vault: Vault):
 def delete_vault_(tx: Transaction, vault_id: int):
     tx.run(
         """
-        MATCH (v:Vault {id: $id})
+        MATCH (v:Vault {vault_id: $id})
         DETACH DELETE v
     """,
         id=vault_id,
@@ -101,8 +101,8 @@ def delete_vault_(tx: Transaction, vault_id: int):
 def add_post_(tx: Transaction, vault_id: int, post_id: int):
     tx.run(
         """
-        MATCH (v:Vault {id: $vault_id})
-        MATCH (p:Post {id: $post_id})
+        MATCH (v:Vault {vault_id: $vault_id})
+        MATCH (p:Post {post_id: $post_id})
         MERGE (v)-[:CONTAINS]->(p)
     """,
         vault_id=vault_id,
@@ -113,7 +113,7 @@ def add_post_(tx: Transaction, vault_id: int, post_id: int):
 def remove_post_(tx: Transaction, vault_id: int, post_id: int):
     tx.run(
         """
-        MATCH (:Vault {id: $vault_id})-[c:CONTAINS]->(:Post {id: $post_id})
+        MATCH (:Vault {vault_id: $vault_id})-[c:CONTAINS]->(:Post {post_id: $post_id})
         DELETE c
     """,
         vault_id=vault_id,
@@ -124,7 +124,7 @@ def remove_post_(tx: Transaction, vault_id: int, post_id: int):
 def react_to_vault_(tx: Transaction, user_id: int, vault_id: int, type: str):
     tx.run(
         """
-        MATCH (u:User {id: $user_id}), (v:Vault {id: $vault_id})
+        MATCH (u:User {user_id: $user_id}), (v:Vault {vault_id: $vault_id})
         MERGE (u)-[r:REACTED_TO_VAULT]->(v)
         WITH r, r.type AS type
         SET r.type = $type
@@ -139,7 +139,7 @@ def get_user_reaction_(user_id: int, vault_id):
     with driver.session() as session:
         result = session.run(
             """
-            MATCH (:User {id: $user_id})-[r:REACTED]->(:Vault {id: $vault_id})
+            MATCH (:User {user_id: $user_id})-[r:REACTED]->(:Vault {vault_id: $vault_id})
             RETURN r.type AS type
         """,
             user_id=user_id,
@@ -151,7 +151,7 @@ def get_user_reaction_(user_id: int, vault_id):
 def invite_user_(tx: Transaction, user_id: int, vault_id: int):
     tx.run(
         """
-            MATCH (u:User {id: $user_id}), (v:Vault {id: $vault_id})
+            MATCH (u:User {user_id: $user_id}), (v:Vault {vault_id: $vault_id})
             MERGE (v)-[:INVITED]->(u)
         """,
         user_id=user_id,
@@ -162,7 +162,7 @@ def invite_user_(tx: Transaction, user_id: int, vault_id: int):
 def accept_invite(tx: Transaction, user_id: int, vault_id: int):
     tx.run(
         """
-            MATCH (u:User {id: $user_id})-[i:INVITED]->(v:Vault {id: $vault_id})
+            MATCH (u:User {user_id: $user_id})-[i:INVITED]->(v:Vault {vault_id: $vault_id})
             DELETE i
             MERGE (u)-[:JOINED]->(v)
         """,
@@ -174,7 +174,7 @@ def accept_invite(tx: Transaction, user_id: int, vault_id: int):
 def decline_invite(tx: Transaction, user_id: int, vault_id: int):
     tx.run(
         """
-            MATCH (:User {id: $user_id})-[i:INVITED]->(:Vault {id: $vault_id})
+            MATCH (:User {user_id: $user_id})-[i:INVITED]->(:Vault {vault_id: $vault_id})
             DELETE i
         """,
         user_id=user_id,

@@ -8,7 +8,7 @@ def create_posts_(tx: Transaction, posts: list[Post]):
     tx.run(
         """
         UNWIND $posts AS post
-        MERGE (p:Post {id: post.id}) 
+        MERGE (p:Post {post_id: post.id}) 
         SET p.date_created = datetime(post.date_created), p.score = post.score 
     """,
         posts=posts,
@@ -18,7 +18,7 @@ def create_posts_(tx: Transaction, posts: list[Post]):
 def update_post_(tx: Transaction, post: Post):
     tx.run(
         """
-        MATCH (p:Post {id: $id}) 
+        MATCH (p:Post {post_id: $id}) 
         SET p.score = $score 
     """,
         id=post.id,
@@ -29,8 +29,8 @@ def update_post_(tx: Transaction, post: Post):
 def react_to_post_(tx: Transaction, user_id: int, post_id: int, type: str):
     tx.run(
         """
-        MATCH (u:User {id: $user_id})
-        MATCH (p:Post {id: $post_id})
+        MATCH (u:User {user_id: $user_id})
+        MATCH (p:Post {post_id: $post_id})
         MERGE (u)-[r:REACTED_TO_POST]->(p)
         SET r.type = $type
     """,
@@ -44,7 +44,7 @@ def get_top_tags_(post_id):
     def get_top_tags(tx: Transaction, post_id: int):
         results = tx.run(
             """
-            MATCH (s:Search)-[c:CLICKED]-(:Post {id: $post_id})
+            MATCH (s:Search)-[c:CLICKED]-(:Post {post_id: $post_id})
             RETURN s.query AS query
             ORDER BY c.count DESC
             LIMIT 5

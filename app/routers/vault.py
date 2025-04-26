@@ -79,7 +79,7 @@ def create_vault(
             session.execute_write(create_vault_, new_vault)
 
         db.commit()
-    except Exception as e:
+    except:
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal error")
     return new_vault
