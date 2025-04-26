@@ -4,7 +4,7 @@ from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import desc, Select
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.db import get_db
 from app.models import Comment, Post, Reaction
 from app.schemas.comment import CommentCreate, CommentResponse
 from app.schemas.reaction import ReactionBase

@@ -6,8 +6,8 @@ import numpy
 from sqlalchemy import desc, Select
 from sqlalchemy.orm import Session
 
-from app.database import driver, get_db
-from app.database.neo4j import (
+from app.db import driver, get_db
+from app.db.neo4j import (
     create_posts_,
     react_to_post_,
     log_search_click_,

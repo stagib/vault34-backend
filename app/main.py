@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi_pagination import add_pagination
 
 from app.config import settings
-from app.database import engine
+from app.db import engine
 from app.models import Base
 from app.routers import auth, comment, post, user, vault, search
 

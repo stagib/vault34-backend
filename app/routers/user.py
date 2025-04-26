@@ -4,8 +4,8 @@ from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from app.database import driver, get_db
-from app.database.neo4j import create_user_
+from app.db import driver, get_db
+from app.db.neo4j import create_user_
 from app.models import User, Vault
 from app.schemas.user import UserCreate, UserResponse
 from app.schemas.vault import VaultResponse

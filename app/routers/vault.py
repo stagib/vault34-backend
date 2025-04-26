@@ -6,8 +6,8 @@ from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import desc, func, Select
 from sqlalchemy.orm import Session
 
-from app.database import driver, get_db
-from app.database.neo4j import *
+from app.db import driver, get_db
+from app.db.neo4j import *
 from app.models import Post, Vault, VaultPost, Reaction
 from app.schemas.vault import VaultBase, VaultPostBase, VaultResponse
 from app.schemas.reaction import ReactionBase

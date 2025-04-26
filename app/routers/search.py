@@ -8,8 +8,8 @@ from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import and_, desc, Select
 from sqlalchemy.orm import Session
 
-from app.database import get_db
-from app.database.neo4j import log_search_
+from app.db import get_db
+from app.db.neo4j import log_search_
 from app.models import Post, Search
 from app.schemas.post import PostBase
 from app.schemas.search import SearchResponse

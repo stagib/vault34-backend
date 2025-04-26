@@ -13,7 +13,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from app.database import Base
+from app.db import Base
 from app.types import PrivacyType, ReactionType, TargetType, RatingType
 
 
