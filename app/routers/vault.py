@@ -12,11 +12,7 @@ from app.models import Post, Vault, VaultPost, Reaction
 from app.schemas.vault import VaultBase, VaultPostBase, VaultResponse
 from app.schemas.reaction import ReactionBase
 from app.types import PrivacyType, TargetType, ReactionType
-from app.utils import (
-    add_item_to_string,
-    calculate_post_score,
-    update_reaction_count,
-)
+from app.utils import add_item_to_string, update_reaction_count
 from app.utils.auth import get_user
 
 router = APIRouter(tags=["Vault"])
@@ -275,7 +271,6 @@ def add_post_to_vault(
 
     new_entry = VaultPost(vault_id=vault.id, post_id=post.id, index=index)
     post.saves += 1
-    post.score = calculate_post_score(post)
     vault.post_count += 1
     vault.previews = add_item_to_string(
         vault.previews, post.preview_url, limit=3

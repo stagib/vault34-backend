@@ -83,6 +83,20 @@ class Post(Base):
     )
 
 
+class PostMetric(Base):
+    __tablename__ = "post_metric"
+    id = Column(Integer, primary_key=True, index=True)
+    date_created = Column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
+    )
+    post_id = Column(Integer, ForeignKey("post.id"), nullable=False)
+    likes = Column(Integer, default=0)
+    dislikes = Column(Integer, default=0)
+    saves = Column(Integer, default=0)
+    comment_count = Column(Integer, default=0)
+    score = Column(Float, default=0)
+
+
 class Vault(Base):
     __tablename__ = "vault"
     id = Column(Integer, primary_key=True, index=True)
@@ -139,7 +153,12 @@ class Reaction(Base):
 
     __table_args__ = (
         Index("ix_reaction_user", "user_id", "target_type", "target_id"),
-        Index("ix_reaction_date_created", "date_created"),
+        Index(
+            "ix_reaction_date_created",
+            "date_created",
+            "target_type",
+            "target_id",
+        ),
     )
 
 

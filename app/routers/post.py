@@ -12,11 +12,15 @@ from app.db.neo4j import (
     react_to_post_,
     log_search_click_,
 )
-from app.models import Post, Reaction
+from app.models import Post, Reaction, PostMetric
 from app.schemas.post import PostBase, PostCreate, PostResponse
 from app.schemas.reaction import ReactionBase
 from app.types import RatingType, TargetType, ReactionType
-from app.utils import calculate_post_score, update_reaction_count
+from app.utils import (
+    calculate_post_score,
+    update_reaction_count,
+    create_post_log,
+)
 
 from app.utils.auth import get_user, get_search_id
 
@@ -115,8 +119,24 @@ def update_post(
         log_search_click_(search_id, post_id)
 
     # update only if enough time as elapsed since last update
-    if post.last_updated + timedelta(minutes=5) < now:
-        post.score = calculate_post_score(post)
+    if post.last_updated + timedelta(minutes=30) < now:
+        prev_log = (
+            db.query(PostMetric)
+            .filter(PostMetric.post_id == post_id)
+            .order_by(desc(PostMetric.date_created))
+            .first()
+        )
+        if prev_log:
+            if prev_log.date_created + timedelta(days=1) < now:
+                log = create_post_log(post, prev_log)
+                db.add(log)
+        else:
+            log = create_post_log(post, None)
+            db.add(log)
+
+        post.score = calculate_post_score(
+            post.likes, post.dislikes, post.saves, post.comment_count
+        )
         post.last_updated = now
 
     try:
