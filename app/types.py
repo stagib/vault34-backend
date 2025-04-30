@@ -24,8 +24,10 @@ class RatingType(Enum):
 
 
 class OrderType(Enum):
+    RELEVANCE = "relevance"
     TRENDING = "trending"
-    views = "views"
-    LIKES = "likes"
+    POPULAR = "popular"
+    POPULAR_WEEK = "popular_week"
+    POPULAR_MONTH = "popular_month"
+    POPULAR_YEAR = "popular_year"
     NEWEST = "newest"
-    OLDEST = "oldest"

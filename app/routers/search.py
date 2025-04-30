@@ -1,5 +1,4 @@
 import re
-import string
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Query, Response
@@ -29,13 +28,19 @@ def normalize_text(query: str):
 
 def order_posts(posts, order):
     if order == OrderType.TRENDING:
+        p = posts.order_by(desc(Post.trend_score))
+    elif order == OrderType.POPULAR:
         p = posts.order_by(desc(Post.score))
-    elif order == OrderType.LIKES:
-        p = posts.order_by(desc(Post.likes))
+    elif order == OrderType.POPULAR_WEEK:
+        p = posts.order_by(desc(Post.week_score))
+    elif order == OrderType.POPULAR_MONTH:
+        p = posts.order_by(desc(Post.month_score))
+    elif order == OrderType.POPULAR_YEAR:
+        p = posts.order_by(desc(Post.year_score))
     elif order == OrderType.NEWEST:
         p = posts.order_by(desc(Post.date_created))
-    elif order == OrderType.OLDEST:
-        p = posts.order_by(Post.date_created)
+    else:
+        p = posts.order_by(desc(Post.trend_score))
     return p
 
 

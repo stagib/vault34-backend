@@ -46,16 +46,14 @@ class VaultPost(Base):
     vault = relationship("Vault", back_populates="vault_posts")
     post = relationship("Post", backref="vault_post")
 
-    __table_args__ = (
-        Index("ix_vault_post_vault_post", "post_id", "vault_id"),
-    )
+    __table_args__ = (Index("ix_vault_post", "post_id", "vault_id"),)
 
 
 class Post(Base):
     __tablename__ = "post"
     id = Column(Integer, primary_key=True, index=True)
     date_created = Column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc)
+        DateTime(timezone=True), default=datetime.now(timezone.utc), index=True
     )
 
     title = Column(String)
@@ -69,18 +67,18 @@ class Post(Base):
     dislikes = Column(Integer, default=0)
     saves = Column(Integer, default=0)
     comment_count = Column(Integer, default=0)
-    score = Column(Float, default=0)
+    embedding = Column(Vector(512))
     last_updated = Column(
         DateTime(timezone=True), default=datetime.now(timezone.utc)
     )
-    embedding = Column(Vector(512))
+
+    score = Column(Float, default=0, index=True)
+    week_score = Column(Float, default=0, index=True)
+    month_score = Column(Float, default=0, index=True)
+    year_score = Column(Float, default=0, index=True)
+    trend_score = Column(Float, default=0, index=True)
 
     comments = relationship("Comment", back_populates="post", lazy="dynamic")
-
-    __table_args__ = (
-        Index("ix_post_score_desc", score.desc()),
-        Index("ix_post_date_created", "date_created"),
-    )
 
 
 class PostMetric(Base):
@@ -94,7 +92,17 @@ class PostMetric(Base):
     dislikes = Column(Integer, default=0)
     saves = Column(Integer, default=0)
     comment_count = Column(Integer, default=0)
+
     score = Column(Float, default=0)
+    week_score = Column(Float, default=0)
+    month_score = Column(Float, default=0)
+    year_score = Column(Float, default=0)
+    trend_score = Column(Float, default=0)
+
+    __table_args__ = (
+        Index("ix_post_id", "post_id"),
+        Index("ix_post_id_date_created", "post_id", "date_created"),
+    )
 
 
 class Vault(Base):
@@ -152,9 +160,9 @@ class Reaction(Base):
     type = Column(Enum(ReactionType), nullable=False)
 
     __table_args__ = (
-        Index("ix_reaction_user", "user_id", "target_type", "target_id"),
+        Index("ix_user_type_id", "user_id", "target_type", "target_id"),
         Index(
-            "ix_reaction_date_created",
+            "ix_date_created_type_id",
             "date_created",
             "target_type",
             "target_id",
@@ -176,4 +184,4 @@ class SearchLog(Base):
     )
     query = Column(String)
 
-    __table_args__ = (Index("ix_search_log_date_created", "date_created"),)
+    __table_args__ = (Index("ix_date_created", "date_created"),)
