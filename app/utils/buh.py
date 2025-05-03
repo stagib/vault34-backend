@@ -97,8 +97,9 @@ def log_post_metric(db: Session, post: Post, now: datetime):
     if prev_log:
         if prev_log.date_created + timedelta(days=1) < now:
             log = create_post_log(post)
-            avg_score = average_post_score(db, post.id)
-            trend_score = get_trend_score(log.score, avg_score)
+            avg_score = average_post_score(db, post.id, 14)
+            avg_score_3 = average_post_score(db, post.id, 3)
+            trend_score = get_trend_score(avg_score_3, avg_score)
             week_score = popularity_score(db, post.id, 7)
             month_score = popularity_score(db, post.id, 30)
             year_score = popularity_score(db, post.id, 365)

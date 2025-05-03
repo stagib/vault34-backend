@@ -75,7 +75,7 @@ def get_recommendation(
     db: Session = Depends(get_db),
 ):
     posts = db.query(Post.id, Post.sample_url, Post.preview_url).order_by(
-        desc(Post.score)
+        desc(Post.week_score)
     )
     return paginate(posts)
 
