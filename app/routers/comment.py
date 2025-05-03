@@ -148,4 +148,8 @@ def react_to_comment(
     except Exception:
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal error")
-    return {"detail": "added reaction"}
+    return {
+        "likes": comment.likes,
+        "dislikes": comment.dislikes,
+        "type": reaction.type,
+    }
