@@ -163,7 +163,7 @@ def react_to_post(
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
 
-    stmt = Select(Reaction.type).where(
+    stmt = Select(Reaction).where(
         Reaction.target_type == TargetType.POST,
         Reaction.target_id == post_id,
         Reaction.user_id == user.id,
