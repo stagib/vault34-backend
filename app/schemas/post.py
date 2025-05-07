@@ -18,6 +18,7 @@ class PostResponse(BaseModel):
     sample_url: str
     file_url: str
     title: str
+    top_tags: list
     rating: str
     score: float
     likes: int

@@ -11,6 +11,7 @@ from sqlalchemy import (
     Integer,
     String,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.db import Base
@@ -62,6 +63,7 @@ class Post(Base):
     file_url = Column(String)
     rating = Column(Enum(RatingType), default=RatingType.EXPLICIT)
     tags = Column(String)
+    top_tags = Column(JSONB, nullable=False)
     source = Column(String)
     likes = Column(Integer, default=0)
     dislikes = Column(Integer, default=0)
@@ -100,7 +102,6 @@ class PostMetric(Base):
     trend_score = Column(Float, default=0)
 
     __table_args__ = (
-        Index("ix_post_id", "post_id"),
         Index("ix_post_id_date_created", "post_id", "date_created"),
     )
 
@@ -185,3 +186,6 @@ class SearchLog(Base):
     query = Column(String)
 
     __table_args__ = (Index("ix_date_created", "date_created"),)
+
+
+Index("ix_post_top_tags", Post.top_tags, postgresql_using="gin")

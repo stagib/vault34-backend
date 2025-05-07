@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 import numpy
+import random
 from sqlalchemy import desc, Select
 from sqlalchemy.orm import Session
 
@@ -38,6 +39,11 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
             if post.rating == RatingType.QUESTIONABLE.value:
                 rating = RatingType.QUESTIONABLE
 
+            split_tags = post.tags.split()
+            random_tags = split_tags
+            if len(split_tags) >= 5:
+                random_tags = random.sample(split_tags, 5)
+
             new_post = Post(
                 title=post.tags,
                 preview_url=post.preview_url,
@@ -47,6 +53,7 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
                 tags=post.tags,
                 source=post.source,
                 embedding=post.embedding,
+                top_tags=random_tags,
             )
             post_objs.append(new_post)
 
