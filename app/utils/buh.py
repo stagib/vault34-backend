@@ -3,6 +3,7 @@ from datetime import datetime, timezone, timedelta
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
+from app.db.neo4j import get_top_tags_
 from app.models import Post, PostMetric
 from app.types import ReactionType
 
@@ -137,3 +138,10 @@ def update_reaction_count(
             model.likes += 1
         elif reaction == ReactionType.DISLIKE:
             model.dislikes += 1
+
+
+def update_top_tags(post):
+    current_tags = post.top_tags or []
+    new_tags = get_top_tags_(post.id)
+    combined = list(set(new_tags + current_tags))
+    post.top_tags = combined[:5]

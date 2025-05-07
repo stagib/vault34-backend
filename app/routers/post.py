@@ -21,6 +21,7 @@ from app.utils import (
     calculate_post_score,
     update_reaction_count,
     log_post_metric,
+    update_top_tags,
 )
 
 from app.utils.auth import get_user, get_search_id
@@ -132,6 +133,7 @@ def update_post(
             post.likes, post.dislikes, post.saves, post.comment_count
         )
         log_post_metric(db, post, now)
+        update_top_tags(post)
 
     try:
         db.commit()
