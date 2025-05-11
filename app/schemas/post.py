@@ -17,6 +17,7 @@ class PostResponse(BaseModel):
     preview_url: str
     sample_url: str
     file_url: str
+    source: str
     title: str
     top_tags: list
     rating: str
