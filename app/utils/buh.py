@@ -49,7 +49,8 @@ def create_post_log(post: Post):
 
 def get_trend_score(score: float, avg_score: float):
     avg = avg_score or 0
-    return score - avg
+    s = score or 0
+    return s - avg
 
 
 def popularity_score(db: Session, post_id: int, days: int = 7):
