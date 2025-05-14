@@ -1,6 +1,6 @@
 from neo4j import Transaction
 
-from app.db import driver
+""" from app.db import driver """
 
 
 def log_search_(search_id, query, user):

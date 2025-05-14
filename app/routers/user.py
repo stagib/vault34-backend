@@ -4,8 +4,9 @@ from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from app.db import driver, get_db
-from app.db.neo4j import create_user_
+from app.db import get_db
+
+""" from app.db.neo4j import create_user_ """
 from app.models import User, Vault
 from app.schemas.user import UserCreate, UserResponse
 from app.schemas.vault import VaultResponse
@@ -37,8 +38,8 @@ def register_user(
         db.add(new_user)
         db.flush()
 
-        with driver.session() as session:
-            session.execute_write(create_user_, new_user)
+        """ with driver.session() as session:
+            session.execute_write(create_user_, new_user) """
 
         db.commit()
     except Exception as e:

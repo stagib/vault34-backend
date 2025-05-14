@@ -1,13 +1,12 @@
-import random
-
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import desc, func, Select
 from sqlalchemy.orm import Session
 
-from app.db import driver, get_db
-from app.db.neo4j import *
+from app.db import get_db
+
+""" from app.db.neo4j import * """
 from app.models import Post, Vault, VaultPost, Reaction
 from app.schemas.vault import VaultBase, VaultPostBase, VaultResponse
 from app.schemas.reaction import ReactionBase
@@ -18,7 +17,7 @@ from app.utils.auth import get_user
 router = APIRouter(tags=["Vault"])
 
 
-@router.get("/vaults/recommend", response_model=list[VaultResponse])
+""" @router.get("/vaults/recommend", response_model=list[VaultResponse])
 def get_vaults(user: dict = Depends(get_user), db: Session = Depends(get_db)):
     top_vaults = db.query(Vault).order_by(desc(Vault.likes)).limit(8)
     top_vault_ids = [vault.id for vault in top_vaults]
@@ -44,6 +43,7 @@ def get_vaults(user: dict = Depends(get_user), db: Session = Depends(get_db)):
         total_vaults = connected_vaults + user_reacted_vaults + top_vault_ids
         vaults = db.query(Vault).filter(Vault.id.in_(total_vaults)).limit(8)
     return vaults
+ """
 
 
 @router.post("/vaults", response_model=VaultResponse)
@@ -71,8 +71,8 @@ def create_vault(
         db.add(new_vault)
         db.flush()
 
-        with driver.session() as session:
-            session.execute_write(create_vault_, new_vault)
+        """ with driver.session() as session:
+            session.execute_write(create_vault_, new_vault) """
 
         db.commit()
     except:
@@ -129,8 +129,8 @@ def update_vault(
     db_vault.layout = vault.layout
 
     try:
-        with driver.session() as session:
-            session.execute_write(update_vault_, db_vault)
+        """with driver.session() as session:
+        session.execute_write(update_vault_, db_vault)"""
 
         db.commit()
     except:
@@ -156,8 +156,8 @@ def delete_vault(
         raise HTTPException(status_code=404, detail="Vault not found")
 
     try:
-        with driver.session() as session:
-            session.execute_write(delete_vault_, vault.id)
+        """with driver.session() as session:
+        session.execute_write(delete_vault_, vault.id)"""
 
         db.delete(vault)
         db.commit()
@@ -203,10 +203,10 @@ def react_to_vault(
 
     try:
         update_reaction_count(vault, prev_reaction, reaction.type)
-        with driver.session() as session:
+        """ with driver.session() as session:
             session.execute_write(
                 react_to_vault_, user.id, vault.id, reaction.type.value
-            )
+            ) """
 
         db.commit()
     except Exception:
@@ -279,8 +279,8 @@ def add_post_to_vault(
     try:
         db.add(new_entry)
 
-        with driver.session() as session:
-            session.execute_write(add_post_, vault.id, post.id)
+        """ with driver.session() as session:
+            session.execute_write(add_post_, vault.id, post.id) """
 
         db.commit()
     except Exception as e:
@@ -312,8 +312,8 @@ def remove_post_from_vault(
         raise HTTPException(status_code=404, detail="Entry not found")
 
     try:
-        with driver.session() as session:
-            session.execute_write(remove_post_, vault.id, vault_post.post_id)
+        """with driver.session() as session:
+        session.execute_write(remove_post_, vault.id, vault_post.post_id)"""
 
         vault_post.post.saves -= 1
         vault.post_count -= 1

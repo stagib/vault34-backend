@@ -8,7 +8,8 @@ from sqlalchemy import and_, desc, Select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.db.neo4j import log_search_
+
+""" from app.db.neo4j import log_search_ """
 from app.models import Post, Search
 from app.schemas.post import PostBase
 from app.schemas.search import SearchResponse
@@ -64,11 +65,9 @@ def update_search_count(db: Session, query: str):
 
 @router.get("/posts", response_model=Page[PostBase])
 def search_posts(
-    response: Response,
     query: str = Query(None),
     rating: RatingType = Query(RatingType.EXPLICIT),
     order: OrderType = Query(OrderType.TRENDING),
-    user: dict = Depends(get_user),
     db: Session = Depends(get_db),
 ):
     posts = db.query(Post.id, Post.sample_url, Post.preview_url)
@@ -79,14 +78,14 @@ def search_posts(
 
     if query:
         normalized_query = normalize_text(query)
-        search_id = str(uuid4())
         posts = filter_posts(posts, normalized_query)
+        """ search_id = str(uuid4())
         update_search_count(db, normalized_query)
         log_search_(search_id, normalized_query, user)
 
         response.set_cookie(
             key="search_id", value=search_id, httponly=True, samesite="lax"
-        )
+        ) """
     return paginate(posts)
 
 

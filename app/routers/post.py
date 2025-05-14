@@ -7,12 +7,13 @@ import random
 from sqlalchemy import desc, Select
 from sqlalchemy.orm import Session
 
-from app.db import driver, get_db
-from app.db.neo4j import (
+from app.db import get_db
+
+""" from app.db.neo4j import (
     create_posts_,
     react_to_post_,
     log_search_click_,
-)
+) """
 from app.models import Post, Reaction
 from app.schemas.post import PostBase, PostCreate, PostResponse
 from app.schemas.reaction import ReactionBase
@@ -33,7 +34,7 @@ router = APIRouter(tags=["Post"])
 def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
     with driver.session() as session:
         post_objs = []
-        neo4j_data = []
+        """ neo4j_data = [] """
 
         for post in posts:
             rating = RatingType.EXPLICIT
@@ -61,7 +62,7 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
         try:
             db.add_all(post_objs)
             db.flush()
-            for post in post_objs:
+            """ for post in post_objs:
                 data = {
                     "id": post.id,
                     "date_created": post.date_created,
@@ -69,7 +70,7 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
                 }
                 neo4j_data.append(data)
 
-            session.execute_write(create_posts_, neo4j_data)
+            session.execute_write(create_posts_, neo4j_data) """
             db.commit()
         except Exception:
             db.rollback()
@@ -124,7 +125,7 @@ def update_post(
 
     # update every time
     if user:
-        log_search_click_(search_id, post_id)
+        """log_search_click_(search_id, post_id)"""
 
     # update only if enough time as elapsed since last update
     if post.last_updated + timedelta(minutes=30) < now:
@@ -194,13 +195,13 @@ def react_to_post(
 
     try:
         update_reaction_count(post, prev_reaction, reaction.type)
-        with driver.session() as session:
+        """ with driver.session() as session:
             session.execute_write(
                 react_to_post_,
                 user.id,
                 post_id,
                 reaction.type.value,
-            )
+            ) """
         db.commit()
     except Exception:
         db.rollback()

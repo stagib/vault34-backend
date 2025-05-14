@@ -24,7 +24,7 @@ def get_db():
         db.close()
 
 
-# neo4j setup
+""" # neo4j setup
 driver = GraphDatabase.driver(
     settings.NEO4J_URI, auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD)
-)
+) """

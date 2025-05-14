@@ -1,6 +1,6 @@
 from neo4j import Transaction
 
-from app.db import driver
+""" from app.db import driver """
 from app.models import Vault
 
 
