@@ -22,7 +22,6 @@ from app.utils import (
     calculate_post_score,
     update_reaction_count,
     log_post_metric,
-    update_top_tags,
 )
 
 from app.utils.auth import get_user, get_search_id
@@ -32,49 +31,48 @@ router = APIRouter(tags=["Post"])
 
 @router.post("/posts")
 def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
-    with driver.session() as session:
-        post_objs = []
-        """ neo4j_data = [] """
+    post_objs = []
+    """ neo4j_data = [] """
 
-        for post in posts:
-            rating = RatingType.EXPLICIT
-            if post.rating == RatingType.QUESTIONABLE.value:
-                rating = RatingType.QUESTIONABLE
+    for post in posts:
+        rating = RatingType.EXPLICIT
+        if post.rating == RatingType.QUESTIONABLE.value:
+            rating = RatingType.QUESTIONABLE
 
-            split_tags = post.tags.split()
-            random_tags = split_tags
-            if len(split_tags) >= 5:
-                random_tags = random.sample(split_tags, 5)
+        split_tags = post.tags.split()
+        random_tags = split_tags
+        if len(split_tags) >= 5:
+            random_tags = random.sample(split_tags, 5)
 
-            new_post = Post(
-                title=post.tags,
-                preview_url=post.preview_url,
-                sample_url=post.sample_url,
-                file_url=post.file_url,
-                rating=rating,
-                tags=post.tags,
-                source=post.source,
-                embedding=post.embedding,
-                top_tags=random_tags,
-            )
-            post_objs.append(new_post)
+        new_post = Post(
+            title=post.tags,
+            preview_url=post.preview_url,
+            sample_url=post.sample_url,
+            file_url=post.file_url,
+            rating=rating,
+            tags=post.tags,
+            source=post.source,
+            embedding=post.embedding,
+            top_tags=random_tags,
+        )
+        post_objs.append(new_post)
 
-        try:
-            db.add_all(post_objs)
-            db.flush()
-            """ for post in post_objs:
-                data = {
-                    "id": post.id,
-                    "date_created": post.date_created,
-                    "score": post.score,
-                }
-                neo4j_data.append(data)
+    try:
+        db.add_all(post_objs)
+        db.flush()
+        """ for post in post_objs:
+            data = {
+                "id": post.id,
+                "date_created": post.date_created,
+                "score": post.score,
+            }
+            neo4j_data.append(data)
 
-            session.execute_write(create_posts_, neo4j_data) """
-            db.commit()
-        except Exception:
-            db.rollback()
-            raise HTTPException(status_code=500, detail="Internal error")
+        session.execute_write(create_posts_, neo4j_data) """
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal error")
 
     return {"detail": "Added posts"}
 
@@ -134,7 +132,7 @@ def update_post(
             post.likes, post.dislikes, post.saves, post.comment_count
         )
         log_post_metric(db, post, now)
-        update_top_tags(post)
+        """ update_top_tags(post) """
 
     try:
         db.commit()

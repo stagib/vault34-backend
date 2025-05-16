@@ -3,6 +3,7 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import desc, func, Select
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.db import get_db
 
@@ -11,7 +12,7 @@ from app.models import Post, Vault, VaultPost, Reaction
 from app.schemas.vault import VaultBase, VaultPostBase, VaultResponse
 from app.schemas.reaction import ReactionBase
 from app.types import PrivacyType, TargetType, ReactionType
-from app.utils import add_item_to_string, update_reaction_count
+from app.utils import update_reaction_count
 from app.utils.auth import get_user
 
 router = APIRouter(tags=["Vault"])
@@ -75,7 +76,8 @@ def create_vault(
             session.execute_write(create_vault_, new_vault) """
 
         db.commit()
-    except:
+    except Exception as e:
+        print(e)
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal error")
     return new_vault
@@ -272,9 +274,12 @@ def add_post_to_vault(
     new_entry = VaultPost(vault_id=vault.id, post_id=post.id, index=index)
     post.saves += 1
     vault.post_count += 1
-    vault.previews = add_item_to_string(
-        vault.previews, post.preview_url, limit=3
-    )
+
+    # update previews
+    previews = vault.previews or []
+    previews.append(post.preview_url)
+    vault.previews = previews[-3:]  # limit to 3
+    flag_modified(vault, "previews")
 
     try:
         db.add(new_entry)

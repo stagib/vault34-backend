@@ -116,7 +116,7 @@ class Vault(Base):
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     title = Column(String, nullable=False)
     description = Column(String)
-    previews = Column(String, default="")
+    previews = Column(JSONB, nullable=False, default=[])
     post_count = Column(Integer, default=0)
     likes = Column(Integer, default=0)
     dislikes = Column(Integer, default=0)

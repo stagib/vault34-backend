@@ -37,5 +37,5 @@ class VaultResponse(BaseModel):
     likes: int
     dislikes: int
     user: UserBase
-    previews: str
+    previews: list[str]
     user_reaction: ReactionType = ReactionType.NONE
