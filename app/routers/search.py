@@ -10,9 +10,10 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 
 """ from app.db.neo4j import log_search_ """
-from app.models import Post, Search
+from app.models import Post, Search, Vault
 from app.schemas.post import PostBase
 from app.schemas.search import SearchResponse
+from app.schemas.vault import VaultBaseResponse
 from app.types import OrderType, RatingType
 from app.utils.auth import get_user
 
@@ -87,6 +88,18 @@ def search_posts(
             key="search_id", value=search_id, httponly=True, samesite="lax"
         ) """
     return paginate(posts)
+
+
+@router.get("/vaults", response_model=Page[VaultBaseResponse])
+def get_vaults(query: str = Query(None), db: Session = Depends(get_db)):
+    vaults = db.query(Vault).order_by(Vault.likes)
+    if query:
+        normalized_query = normalize_text(query)
+        words = normalized_query.lower().split()
+        words = [word.strip() for word in words]
+        conditions = [Vault.title.ilike(f"%{word}%") for word in words]
+        vaults = vaults.filter(and_(*conditions))
+    return paginate(vaults)
 
 
 @router.get("/searches", response_model=list[SearchResponse])

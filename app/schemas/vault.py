@@ -27,6 +27,13 @@ class VaultBase(BaseModel):
     layout: str = Field(..., min_length=1, max_length=30)
 
 
+class VaultBaseResponse(BaseModel):
+    id: int
+    title: str
+    post_count: int
+    previews: list[str]
+
+
 class VaultResponse(BaseModel):
     id: int
     date_created: datetime
