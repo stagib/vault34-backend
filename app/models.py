@@ -63,7 +63,8 @@ class Post(Base):
     file_url = Column(String)
     rating = Column(Enum(RatingType), default=RatingType.EXPLICIT)
     tags = Column(String)
-    top_tags = Column(JSONB, nullable=False)
+    top_tags = Column(JSONB, nullable=False, default=[])
+    top_vaults = Column(JSONB, default=[])  # change later
     source = Column(String)
     likes = Column(Integer, default=0)
     dislikes = Column(Integer, default=0)
@@ -188,4 +189,4 @@ class SearchLog(Base):
     __table_args__ = (Index("ix_date_created", "date_created"),)
 
 
-Index("ix_post_top_tags", Post.top_tags, postgresql_using="gin")
+""" Index("ix_post_top_tags", Post.top_tags, postgresql_using="gin") """

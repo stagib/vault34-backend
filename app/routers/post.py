@@ -14,15 +14,12 @@ from app.db import get_db
     react_to_post_,
     log_search_click_,
 ) """
-from app.models import Post, Reaction
+from app.models import Post, Reaction, Vault
 from app.schemas.post import PostBase, PostCreate, PostResponse
 from app.schemas.reaction import ReactionBase
+from app.schemas.vault import VaultBaseResponse
 from app.types import RatingType, TargetType, ReactionType
-from app.utils import (
-    calculate_post_score,
-    update_reaction_count,
-    log_post_metric,
-)
+from app.utils import update_reaction_count, log_post_metric, update_top_vaults
 
 from app.utils.auth import get_user, get_search_id
 
@@ -126,12 +123,10 @@ def update_post(
         """log_search_click_(search_id, post_id)"""
 
     # update only if enough time as elapsed since last update
-    if post.last_updated + timedelta(minutes=30) < now:
+    if post.last_updated + timedelta(days=1) < now:
         post.last_updated = now
-        post.score = calculate_post_score(
-            post.likes, post.dislikes, post.saves, post.comment_count
-        )
         log_post_metric(db, post, now)
+        update_top_vaults(db, post)
         """ update_top_tags(post) """
 
     try:
@@ -155,6 +150,18 @@ def get_post_recommendation(
         Post.embedding.cosine_distance(vector), desc(Post.score)
     )
     return paginate(posts)
+
+
+@router.get(
+    "/posts/{post_id}/recommend/vaults", response_model=list[VaultBaseResponse]
+)
+def get_post_vault_recommendation(post_id: int, db: Session = Depends(get_db)):
+    vaults = []
+    top_vaults = db.query(Post.top_vaults).filter(Post.id == post_id).first()
+    if top_vaults[0]:
+        ids = [int(id) for id in top_vaults[0]]
+        vaults = db.query(Vault).filter(Vault.id.in_(ids)).limit(4).all()
+    return vaults
 
 
 @router.post("/posts/{post_id}/reactions")
