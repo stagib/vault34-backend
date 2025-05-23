@@ -2,6 +2,7 @@ from neo4j import GraphDatabase
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql import text
 
 from app.config import settings
 
@@ -18,6 +19,7 @@ Base = declarative_base()
 
 def get_db():
     db = SessionLocal()
+    db.execute(text("SET hnsw.ef_search = 800"))
     try:
         yield db
     finally:
