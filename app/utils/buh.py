@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.db.neo4j import get_top_tags_
-from app.models import Post, PostMetric, VaultPost, Vault
+from app.models import Post, PostMetric, VaultPost, Vault, VaultMetric
 from app.types import ReactionType
 
 
@@ -27,7 +27,7 @@ def get_emeddings(post_ids: str, db: Session):
     return [post.embedding for post in posts]
 
 
-def calculate_post_score(
+def calculate_score(
     likes: int = 0, dislikes: int = 0, saves: int = 0, comment_count: int = 0
 ):
     score = likes + dislikes + (comment_count * 2) + (saves * 3)
@@ -50,7 +50,15 @@ def create_post_log(post: Post):
     return post_metric
 
 
-def get_trend_score(score: float, avg_score: float):
+def create_vault_log(vault: Vault):
+    vault_metric = VaultMetric(
+        vault_id=vault.id,
+        score=vault.score,
+    )
+    return vault_metric
+
+
+def calculate_trend_score(score: float, avg_score: float):
     avg = avg_score or 0
     s = score or 0
     return s - avg
@@ -74,6 +82,21 @@ def popularity_score(db: Session, post_id: int, days: int = 7):
         return None
 
 
+def vault_popularity_score(db: Session, id: int, days: int = 7):
+    now = datetime.now(timezone.utc)
+    start_time = now - timedelta(days=days)
+
+    result = (
+        db.query(func.sum(VaultMetric.score).label("total_score"))
+        .filter(
+            VaultMetric.vault_id == id,
+            VaultMetric.date_created >= start_time,
+        )
+        .first()
+    )
+    return result.total_score or 0
+
+
 def average_post_score(db: Session, post_id: int, days: int = 7):
     now = datetime.now(timezone.utc)
     start_time = now - timedelta(days=days)
@@ -92,6 +115,21 @@ def average_post_score(db: Session, post_id: int, days: int = 7):
         return None
 
 
+def average_vault_score(db: Session, id: int, days: int = 7):
+    now = datetime.now(timezone.utc)
+    start_time = now - timedelta(days=days)
+
+    result = (
+        db.query(func.avg(VaultMetric.score).label("avg_score"))
+        .filter(
+            VaultMetric.vault_id == id,
+            VaultMetric.date_created >= start_time,
+        )
+        .first()
+    )
+    return result.avg_score or 0
+
+
 def log_post_metric(db: Session, post: Post, now: datetime):
     prev_log = (
         db.query(PostMetric)
@@ -104,7 +142,7 @@ def log_post_metric(db: Session, post: Post, now: datetime):
             log = create_post_log(post)
             avg_score = average_post_score(db, post.id, 14)
             avg_score_3 = average_post_score(db, post.id, 3)
-            trend_score = get_trend_score(avg_score_3, avg_score)
+            trend_score = calculate_trend_score(avg_score_3, avg_score)
             week_score = popularity_score(db, post.id, 7)
             month_score = popularity_score(db, post.id, 30)
             year_score = popularity_score(db, post.id, 365)
@@ -113,12 +151,42 @@ def log_post_metric(db: Session, post: Post, now: datetime):
             post.week_score = week_score
             post.month_score = month_score
             post.year_score = year_score
-            post.score = calculate_post_score(
+            post.score = calculate_score(
                 post.likes, post.dislikes, post.saves, post.comment_count
             )
             db.add(log)
     else:
         log = create_post_log(post)
+        db.add(log)
+
+
+def log_vault_metric(db: Session, vault: Vault, now: datetime):
+    prev_log = (
+        db.query(VaultMetric)
+        .filter(VaultMetric.vault_id == vault.id)
+        .order_by(desc(VaultMetric.date_created))
+        .first()
+    )
+
+    if not prev_log:
+        log = create_vault_log(vault)
+        db.add(log)
+        return
+
+    if prev_log.date_created + timedelta(days=1) < now:
+        log = create_vault_log(vault)
+        avg_score_14 = average_vault_score(db, vault.id, 14)
+        avg_score_3 = average_vault_score(db, vault.id, 3)
+        trend_score = calculate_trend_score(avg_score_3, avg_score_14)
+        week_score = vault_popularity_score(db, vault.id, 7)
+        month_score = vault_popularity_score(db, vault.id, 30)
+        year_score = vault_popularity_score(db, vault.id, 365)
+
+        vault.trend_score = trend_score
+        vault.week_score = week_score
+        vault.month_score = month_score
+        vault.year_score = year_score
+        vault.score = calculate_score(vault.likes, vault.dislikes)
         db.add(log)
 
 

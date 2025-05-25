@@ -125,6 +125,9 @@ class Vault(Base):
     privacy = Column(
         Enum(PrivacyType), nullable=False, default=PrivacyType.PRIVATE
     )
+    last_updated = Column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
+    )
 
     score = Column(Float, default=0, index=True)
     week_score = Column(Float, default=0, index=True)

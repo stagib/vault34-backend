@@ -1,3 +1,4 @@
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
@@ -17,7 +18,7 @@ from app.schemas.vault import (
 )
 from app.schemas.reaction import ReactionBase
 from app.types import PrivacyType, TargetType, ReactionType
-from app.utils import update_reaction_count
+from app.utils import update_reaction_count, log_vault_metric
 from app.utils.auth import get_user
 
 router = APIRouter(tags=["Vault"])
@@ -150,6 +151,27 @@ def delete_vault(
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal error")
     return {"detail": "Successfully deleted vault"}
+
+
+@router.post("/vaults/{vault_id}/log")
+def update_vault_log(vault_id: int, db: Session = Depends(get_db)):
+    now = datetime.now(timezone.utc)
+    vault = db.get(Vault, vault_id)
+    if not vault:
+        raise HTTPException(status_code=404, detail="Vault not found")
+
+    if not vault.last_updated:
+        vault.last_updated = now
+
+    if vault.last_updated and vault.last_updated + timedelta(days=1) < now:
+        vault.last_updated = now
+        log_vault_metric(db, vault, now)
+
+    try:
+        db.commit()
+    except Exception:
+        raise HTTPException(status_code=500, detail="Internal error")
+    return {"detail"}
 
 
 @router.post("/vaults/{vault_id}/reactions")
