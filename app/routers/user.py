@@ -9,7 +9,7 @@ from app.db import get_db
 """ from app.db.neo4j import create_user_ """
 from app.models import User, Vault
 from app.schemas.user import UserCreate, UserResponse
-from app.schemas.vault import VaultResponse
+from app.schemas.vault import VaultBaseResponse
 from app.types import PrivacyType
 from app.utils.auth import (
     create_token,
@@ -83,7 +83,7 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
     return user
 
 
-@router.get("/users/{user_id}/vaults", response_model=Page[VaultResponse])
+@router.get("/users/{user_id}/vaults", response_model=Page[VaultBaseResponse])
 def get_user_vaults(
     user_id: int, user: dict = Depends(get_user), db: Session = Depends(get_db)
 ):

@@ -25,6 +25,7 @@ class PostResponse(BaseModel):
     likes: int
     dislikes: int
     user_reaction: ReactionType = ReactionType.NONE
+    last_updated: datetime
 
 
 class PostCreate(BaseModel):

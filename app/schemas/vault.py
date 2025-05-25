@@ -32,6 +32,7 @@ class VaultBaseResponse(BaseModel):
     title: str
     post_count: int
     previews: list[str]
+    user: UserBase
 
 
 class VaultResponse(BaseModel):
@@ -46,3 +47,4 @@ class VaultResponse(BaseModel):
     user: UserBase
     previews: list[str]
     user_reaction: ReactionType = ReactionType.NONE
+    last_updated: datetime
