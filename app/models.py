@@ -126,10 +126,26 @@ class Vault(Base):
         Enum(PrivacyType), nullable=False, default=PrivacyType.PRIVATE
     )
 
+    score = Column(Float, default=0, index=True)
+    week_score = Column(Float, default=0, index=True)
+    month_score = Column(Float, default=0, index=True)
+    year_score = Column(Float, default=0, index=True)
+    trend_score = Column(Float, default=0, index=True)
+
     user = relationship("User", back_populates="vaults")
     vault_posts = relationship(
         "VaultPost", back_populates="vault", cascade="all, delete-orphan"
     )
+
+
+class VaultMetric(Base):
+    __tablename__ = "vault_metric"
+    id = Column(Integer, primary_key=True, index=True)
+    date_created = Column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
+    )
+    vault_id = Column(Integer, ForeignKey("vault.id"), nullable=False)
+    score = Column(Float, default=0)
 
 
 class Comment(Base):
