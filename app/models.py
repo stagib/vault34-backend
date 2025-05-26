@@ -84,29 +84,6 @@ class Post(Base):
     comments = relationship("Comment", back_populates="post", lazy="dynamic")
 
 
-class PostMetric(Base):
-    __tablename__ = "post_metric"
-    id = Column(Integer, primary_key=True, index=True)
-    date_created = Column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc)
-    )
-    post_id = Column(Integer, ForeignKey("post.id"), nullable=False)
-    likes = Column(Integer, default=0)
-    dislikes = Column(Integer, default=0)
-    saves = Column(Integer, default=0)
-    comment_count = Column(Integer, default=0)
-
-    score = Column(Float, default=0)
-    week_score = Column(Float, default=0)
-    month_score = Column(Float, default=0)
-    year_score = Column(Float, default=0)
-    trend_score = Column(Float, default=0)
-
-    __table_args__ = (
-        Index("ix_post_id_date_created", "post_id", "date_created"),
-    )
-
-
 class Vault(Base):
     __tablename__ = "vault"
     id = Column(Integer, primary_key=True, index=True)
@@ -139,16 +116,6 @@ class Vault(Base):
     vault_posts = relationship(
         "VaultPost", back_populates="vault", cascade="all, delete-orphan"
     )
-
-
-class VaultMetric(Base):
-    __tablename__ = "vault_metric"
-    id = Column(Integer, primary_key=True, index=True)
-    date_created = Column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc)
-    )
-    vault_id = Column(Integer, ForeignKey("vault.id"), nullable=False)
-    score = Column(Float, default=0)
 
 
 class Comment(Base):
@@ -193,19 +160,58 @@ class Reaction(Base):
 
 class Search(Base):
     __tablename__ = "search"
-    query = Column(String, primary_key=True, index=True)
-    count = Column(Integer, default=1, index=True)
+    query = Column(String, primary_key=True, index=True, unique=True)
+    last_updated = Column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
+    )
+    score = Column(Integer, default=1, index=True)
+    week_score = Column(Integer, default=1, index=True)
+    month_score = Column(Integer, default=1, index=True)
+    year_score = Column(Integer, default=1, index=True)
+    trend_score = Column(Integer, default=0, index=True)
 
 
-class SearchLog(Base):
-    __tablename__ = "search_log"
+class SearchMetric(Base):
+    __tablename__ = "search_metric"
+    id = Column(Integer, primary_key=True, index=True)
+    query = Column(String, index=True)
+    date_created = Column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
+    )
+    score = Column(Integer, default=1)
+
+
+class VaultMetric(Base):
+    __tablename__ = "vault_metric"
     id = Column(Integer, primary_key=True, index=True)
     date_created = Column(
         DateTime(timezone=True), default=datetime.now(timezone.utc)
     )
-    query = Column(String)
+    vault_id = Column(Integer, ForeignKey("vault.id"), nullable=False)
+    score = Column(Float, default=0)
 
-    __table_args__ = (Index("ix_date_created", "date_created"),)
+
+class PostMetric(Base):
+    __tablename__ = "post_metric"
+    id = Column(Integer, primary_key=True, index=True)
+    date_created = Column(
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
+    )
+    post_id = Column(Integer, ForeignKey("post.id"), nullable=False)
+    likes = Column(Integer, default=0)
+    dislikes = Column(Integer, default=0)
+    saves = Column(Integer, default=0)
+    comment_count = Column(Integer, default=0)
+
+    score = Column(Float, default=0)
+    week_score = Column(Float, default=0)
+    month_score = Column(Float, default=0)
+    year_score = Column(Float, default=0)
+    trend_score = Column(Float, default=0)
+
+    __table_args__ = (
+        Index("ix_post_id_date_created", "post_id", "date_created"),
+    )
 
 
 """ Index("ix_post_top_tags", Post.top_tags, postgresql_using="gin") """

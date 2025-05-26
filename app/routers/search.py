@@ -1,7 +1,8 @@
 import re
 from uuid import uuid4
+from datetime import datetime, timezone, timedelta
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query, Response, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import and_, desc, Select
@@ -16,6 +17,7 @@ from app.schemas.search import SearchResponse
 from app.schemas.vault import VaultBaseResponse
 from app.types import OrderType, RatingType
 from app.utils.auth import get_user
+from app.utils import log_search_metric
 
 router = APIRouter(tags=["Search"])
 
@@ -71,6 +73,7 @@ def search_posts(
     order: OrderType = Query(OrderType.TRENDING),
     db: Session = Depends(get_db),
 ):
+    now = datetime.now(timezone.utc)
     posts = db.query(Post.id, Post.sample_url, Post.preview_url)
     posts = order_posts(posts, order)
 
@@ -80,6 +83,20 @@ def search_posts(
     if query:
         normalized_query = normalize_text(query)
         posts = filter_posts(posts, normalized_query)
+        search = db.get(Search, normalized_query)
+
+        if not search:
+            search = Search(query=normalized_query, last_updated=now)
+            db.add(search)
+
+        if search and search.last_updated + timedelta(days=1) < now:
+            search.last_updated = now
+            log_search_metric(db, search, now)
+
+        try:
+            db.commit()
+        except Exception:
+            raise HTTPException(status_code=500, detail="Internal error")
         """ search_id = str(uuid4())
         update_search_count(db, normalized_query)
         log_search_(search_id, normalized_query, user)
@@ -107,7 +124,7 @@ def get_searches(
     query: str = Query(None),
     db: Session = Depends(get_db),
 ):
-    stmt = Select(Search.query, Search.count).order_by(desc(Search.count))
+    stmt = Select(Search.query, Search.score).order_by(desc(Search.score))
 
     if query:
         normalized_query = normalize_text(query)
