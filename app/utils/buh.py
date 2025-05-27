@@ -1,4 +1,14 @@
+import re
+
 from app.types import ReactionType
+
+
+def normalize_text(query: str):
+    q = query
+    q = q.lower()
+    q = q.strip()
+    q = re.sub(r"\s+", " ", q)
+    return q
 
 
 def add_item_to_string(string: str, item: str, limit: int = 100):

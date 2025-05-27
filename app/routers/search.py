@@ -1,4 +1,3 @@
-import re
 from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, Query, HTTPException
@@ -15,17 +14,10 @@ from app.schemas.post import PostBase
 from app.schemas.search import SearchResponse
 from app.schemas.vault import VaultBaseResponse
 from app.types import OrderType, RatingType
+from app.utils import normalize_text
 from app.utils.search import log_search_metric
 
 router = APIRouter(tags=["Search"])
-
-
-def normalize_text(query: str):
-    q = query
-    q = q.lower()
-    q = q.strip()
-    q = re.sub(r"\s+", " ", q)
-    return q
 
 
 def order_posts(posts, order):
