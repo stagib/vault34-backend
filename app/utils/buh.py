@@ -1,16 +1,3 @@
-import numpy
-import random
-
-from sqlalchemy import desc
-from sqlalchemy.orm import Session
-from sqlalchemy.orm.attributes import flag_modified
-
-from app.db.neo4j import get_top_tags_
-from app.models import (
-    Post,
-    VaultPost,
-    Vault,
-)
 from app.types import ReactionType
 
 
@@ -37,37 +24,6 @@ def calculate_trend_score(score: float, avg_score: float):
     return s - avg
 
 
-def get_similar_post(db: Session, embed: list[float], size: int = 32):
-    vector = numpy.array(embed).tolist()
-    posts = (
-        db.query(Post.id)
-        .order_by(Post.embedding.cosine_distance(vector), desc(Post.score))
-        .limit(100)
-    )
-    postIds = [post.id for post in posts]
-    results = random.sample(postIds, size)
-    return results
-
-
-def get_post_vaults(db: Session, ids: list[int], size: int = 4):
-    vaults = (
-        db.query(Vault.id)
-        .join(VaultPost, VaultPost.vault_id == Vault.id)
-        .filter(VaultPost.post_id.in_(ids))
-        .order_by(desc(Vault.likes))
-        .limit(size)
-        .all()
-    )
-    return list(set([vault.id for vault in vaults]))
-
-
-def update_top_vaults(db: Session, post: Post):
-    similarIds = get_similar_post(db, post.embedding)
-    vaultIds = get_post_vaults(db, similarIds)
-    post.top_vaults = vaultIds
-    flag_modified(post, "top_vaults")
-
-
 def update_reaction_count(
     model,
     db_reaction: ReactionType,
@@ -91,10 +47,3 @@ def update_reaction_count(
             model.likes += 1
         elif reaction == ReactionType.DISLIKE:
             model.dislikes += 1
-
-
-def update_top_tags(post):
-    current_tags = post.top_tags or []
-    new_tags = get_top_tags_(post.id)
-    combined = list(set(new_tags + current_tags))
-    post.top_tags = combined[:5]

@@ -19,10 +19,9 @@ from app.schemas.post import PostBase, PostCreate, PostResponse
 from app.schemas.reaction import ReactionBase
 from app.schemas.vault import VaultBaseResponse
 from app.types import RatingType, TargetType, ReactionType
-from app.utils import update_reaction_count, update_top_vaults
-from app.utils.post import log_post_metric
-
+from app.utils import update_reaction_count
 from app.utils.auth import get_user, get_search_id
+from app.utils.post import log_post_metric, update_top_vaults
 
 router = APIRouter(tags=["Post"])
 

@@ -3,8 +3,20 @@ from datetime import datetime, timezone, timedelta
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
-from app.models import Vault, VaultMetric
+from app.models import Vault, VaultMetric, VaultPost
 from app.utils import calculate_score, calculate_trend_score
+
+
+def get_post_vaults(db: Session, ids: list[int], size: int = 4):
+    vaults = (
+        db.query(Vault.id)
+        .join(VaultPost, VaultPost.vault_id == Vault.id)
+        .filter(VaultPost.post_id.in_(ids))
+        .order_by(desc(Vault.likes))
+        .limit(size)
+        .all()
+    )
+    return list(set([vault.id for vault in vaults]))
 
 
 """ metric functions """

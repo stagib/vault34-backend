@@ -4,18 +4,15 @@ import random
 
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 
 from app.models import Post, PostMetric
 from app.utils import calculate_trend_score, calculate_score
-
-
-def get_embeddings(post_ids: str, db: Session):
-    id_list = post_ids.split()
-    posts = db.query(Post).filter(Post.id.in_(id_list)).all()
-    return [post.embedding for post in posts]
+from app.utils.vault import get_post_vaults
 
 
 def get_similar_post(db: Session, embed: list[float], size: int = 32):
+    """Return post ids of post most similar to input vector."""
     vector = numpy.array(embed).tolist()
     posts = (
         db.query(Post.id)
@@ -25,6 +22,24 @@ def get_similar_post(db: Session, embed: list[float], size: int = 32):
     postIds = [post.id for post in posts]
     results = random.sample(postIds, size)
     return results
+
+
+def update_top_vaults(db: Session, post: Post):
+    similarIds = get_similar_post(db, post.embedding)
+    vaultIds = get_post_vaults(db, similarIds, 4)
+    post.top_vaults = vaultIds
+    flag_modified(post, "top_vaults")
+
+
+def update_top_tags(post):
+    """
+    update later
+
+    current_tags = post.top_tags or []
+    new_tags = get_top_tags_(post.id)
+    combined = list(set(new_tags + current_tags))
+    post.top_tags = combined[:5]
+    """
 
 
 """ metric functions """
