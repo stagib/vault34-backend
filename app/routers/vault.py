@@ -18,8 +18,9 @@ from app.schemas.vault import (
 )
 from app.schemas.reaction import ReactionBase
 from app.types import PrivacyType, TargetType, ReactionType
-from app.utils import update_reaction_count, log_vault_metric
+from app.utils import update_reaction_count
 from app.utils.auth import get_user
+from app.utils.vault import log_vault_metric
 
 router = APIRouter(tags=["Vault"])
 

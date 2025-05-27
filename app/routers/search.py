@@ -1,8 +1,7 @@
 import re
-from uuid import uuid4
 from datetime import datetime, timezone, timedelta
 
-from fastapi import APIRouter, Depends, Query, Response, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import and_, desc, Select
@@ -16,8 +15,7 @@ from app.schemas.post import PostBase
 from app.schemas.search import SearchResponse
 from app.schemas.vault import VaultBaseResponse
 from app.types import OrderType, RatingType
-from app.utils.auth import get_user
-from app.utils import log_search_metric
+from app.utils.search import log_search_metric
 
 router = APIRouter(tags=["Search"])
 
