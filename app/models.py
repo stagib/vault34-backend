@@ -180,6 +180,10 @@ class SearchMetric(Base):
     )
     score = Column(Integer, default=1)
 
+    __table_args__ = (
+        Index("ix_search_query_date_created", "query", "date_created"),
+    )
+
 
 class VaultMetric(Base):
     __tablename__ = "vault_metric"
@@ -190,6 +194,10 @@ class VaultMetric(Base):
     vault_id = Column(Integer, ForeignKey("vault.id"), nullable=False)
     score = Column(Float, default=0)
 
+    __table_args__ = (
+        Index("ix_vault_id_date_created", "vault_id", "date_created"),
+    )
+
 
 class PostMetric(Base):
     __tablename__ = "post_metric"
@@ -198,11 +206,6 @@ class PostMetric(Base):
         DateTime(timezone=True), default=datetime.now(timezone.utc)
     )
     post_id = Column(Integer, ForeignKey("post.id"), nullable=False)
-    likes = Column(Integer, default=0)
-    dislikes = Column(Integer, default=0)
-    saves = Column(Integer, default=0)
-    comment_count = Column(Integer, default=0)
-
     score = Column(Float, default=0)
     week_score = Column(Float, default=0)
     month_score = Column(Float, default=0)

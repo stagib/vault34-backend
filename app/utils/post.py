@@ -48,10 +48,6 @@ def update_top_tags(post):
 def create_post_log(post: Post):
     post_metric = PostMetric(
         post_id=post.id,
-        likes=post.likes,
-        dislikes=post.dislikes,
-        saves=post.saves,
-        comment_count=post.comment_count,
         score=post.score,
         week_score=post.week_score,
         month_score=post.month_score,
