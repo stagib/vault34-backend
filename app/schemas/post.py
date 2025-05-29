@@ -21,6 +21,7 @@ class PostResponse(BaseModel):
     title: str
     top_tags: list[str]
     rating: str
+    type: str
     score: float
     likes: int
     dislikes: int
