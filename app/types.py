@@ -23,6 +23,11 @@ class RatingType(Enum):
     QUESTIONABLE = "questionable"
 
 
+class FileType(Enum):
+    IMAGE = "image"
+    VIDEO = "video"
+
+
 class OrderType(Enum):
     RELEVANCE = "relevance"
     TRENDING = "trending"

@@ -15,7 +15,13 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from app.db import Base
-from app.types import PrivacyType, ReactionType, TargetType, RatingType
+from app.types import (
+    PrivacyType,
+    ReactionType,
+    TargetType,
+    RatingType,
+    FileType,
+)
 
 
 class User(Base):
@@ -57,14 +63,17 @@ class Post(Base):
         DateTime(timezone=True), default=datetime.now(timezone.utc), index=True
     )
 
-    title = Column(String)
+    title = Column(String, default="")
     preview_url = Column(String)
     sample_url = Column(String)
     file_url = Column(String)
-    rating = Column(Enum(RatingType), default=RatingType.EXPLICIT)
+    rating = Column(
+        Enum(RatingType), nullable=False, default=RatingType.EXPLICIT
+    )
+    type = Column(Enum(FileType), nullable=False, default=FileType.IMAGE)
     tags = Column(String)
     top_tags = Column(JSONB, nullable=False, default=[])
-    top_vaults = Column(JSONB, default=[])  # change later
+    top_vaults = Column(JSONB, nullable=False, default=[])  # change later
     source = Column(String)
     likes = Column(Integer, default=0)
     dislikes = Column(Integer, default=0)

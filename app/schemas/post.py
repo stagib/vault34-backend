@@ -39,3 +39,4 @@ class PostCreate(BaseModel):
     source: str
     score: int
     embedding: list[float]
+    type: str

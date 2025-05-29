@@ -18,7 +18,7 @@ from app.models import Post, Reaction, Vault
 from app.schemas.post import PostBase, PostCreate, PostResponse
 from app.schemas.reaction import ReactionBase
 from app.schemas.vault import VaultBaseResponse
-from app.types import RatingType, TargetType, ReactionType
+from app.types import RatingType, TargetType, ReactionType, FileType
 from app.utils import update_reaction_count
 from app.utils.auth import get_user, get_search_id
 from app.utils.post import log_post_metric, update_top_vaults
@@ -31,10 +31,17 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
     post_objs = []
     """ neo4j_data = [] """
 
+    if len(posts) > 1000:
+        raise HTTPException(status_code=422, detail="Unprocessable Entity")
+
     for post in posts:
         rating = RatingType.EXPLICIT
         if post.rating == RatingType.QUESTIONABLE.value:
             rating = RatingType.QUESTIONABLE
+
+        type = FileType.IMAGE
+        if post.type == FileType.VIDEO.value:
+            type = FileType.VIDEO
 
         split_tags = post.tags.split()
         random_tags = split_tags
@@ -51,6 +58,9 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
             source=post.source,
             embedding=post.embedding,
             top_tags=random_tags,
+            score=post.score,
+            week_score=post.score,
+            type=type,
         )
         post_objs.append(new_post)
 
