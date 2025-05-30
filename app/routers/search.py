@@ -64,7 +64,7 @@ def search_posts(
     db: Session = Depends(get_db),
 ):
     now = datetime.now(timezone.utc)
-    posts = db.query(Post.id, Post.sample_url, Post.preview_url)
+    posts = db.query(Post.id, Post.sample_url, Post.preview_url, Post.type)
     posts = order_posts(posts, order)
 
     if rating == RatingType.QUESTIONABLE:

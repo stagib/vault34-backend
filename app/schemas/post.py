@@ -9,6 +9,7 @@ class PostBase(BaseModel):
     id: int
     sample_url: str
     preview_url: str
+    type: str
 
 
 class PostResponse(BaseModel):

@@ -88,9 +88,9 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
 def get_recommendation(
     db: Session = Depends(get_db),
 ):
-    posts = db.query(Post.id, Post.sample_url, Post.preview_url).order_by(
-        desc(Post.week_score)
-    )
+    posts = db.query(
+        Post.id, Post.sample_url, Post.preview_url, Post.type
+    ).order_by(desc(Post.week_score))
     return paginate(posts)
 
 
@@ -156,9 +156,9 @@ def get_post_recommendation(
         raise HTTPException(status_code=404, detail="Post not found")
 
     vector = numpy.array(post.embedding).tolist()
-    posts = db.query(Post.id, Post.sample_url, Post.preview_url).order_by(
-        Post.embedding.cosine_distance(vector), desc(Post.score)
-    )
+    posts = db.query(
+        Post.id, Post.sample_url, Post.preview_url, Post.type
+    ).order_by(Post.embedding.cosine_distance(vector), desc(Post.score))
     return paginate(posts)
 
 
