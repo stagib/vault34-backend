@@ -1,6 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
+from fastapi_pagination.cursor import CursorPage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import desc, func, Select
 from sqlalchemy.orm import Session
@@ -222,7 +223,9 @@ def react_to_vault(
     return {"detail": "reaction added"}
 
 
-@router.get("/vaults/{vault_id}/posts", response_model=Page[VaultPostBase])
+@router.get(
+    "/vaults/{vault_id}/posts", response_model=CursorPage[VaultPostBase]
+)
 def get_vault_posts(
     vault_id: int,
     user: dict = Depends(get_user),
