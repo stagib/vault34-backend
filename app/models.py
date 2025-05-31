@@ -84,11 +84,11 @@ class Post(Base):
         DateTime(timezone=True), default=datetime.now(timezone.utc)
     )
 
-    score = Column(Float, default=0, index=True)
-    week_score = Column(Float, default=0, index=True)
-    month_score = Column(Float, default=0, index=True)
-    year_score = Column(Float, default=0, index=True)
-    trend_score = Column(Float, default=0, index=True)
+    score = Column(Float, nullable=False, default=0, index=True)
+    week_score = Column(Float, nullable=False, default=0, index=True)
+    month_score = Column(Float, nullable=False, default=0, index=True)
+    year_score = Column(Float, nullable=False, default=0, index=True)
+    trend_score = Column(Float, nullable=False, default=0, index=True)
 
     comments = relationship("Comment", back_populates="post", lazy="dynamic")
 
