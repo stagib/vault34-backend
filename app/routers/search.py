@@ -2,6 +2,7 @@ from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi_pagination import Page
+from fastapi_pagination.cursor import CursorPage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import and_, desc, Select
 from sqlalchemy.orm import Session
@@ -56,7 +57,7 @@ def update_search_count(db: Session, query: str):
     db.commit()
 
 
-@router.get("/posts", response_model=Page[PostBase])
+@router.get("/posts", response_model=CursorPage[PostBase])
 def search_posts(
     query: str = Query(None),
     rating: RatingType = Query(RatingType.EXPLICIT),

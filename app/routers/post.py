@@ -1,7 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
+from fastapi_pagination.cursor import CursorPage
 import numpy
 import random
 from sqlalchemy import desc, Select
@@ -84,7 +84,7 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
     return {"detail": "Added posts"}
 
 
-@router.get("/posts/recommend", response_model=Page[PostBase])
+@router.get("/posts/recommend", response_model=CursorPage[PostBase])
 def get_recommendation(
     db: Session = Depends(get_db),
 ):
@@ -146,7 +146,7 @@ def update_post(
     return {"detail"}
 
 
-@router.get("/posts/{post_id}/recommend", response_model=Page[PostBase])
+@router.get("/posts/{post_id}/recommend", response_model=CursorPage[PostBase])
 def get_post_recommendation(
     post_id: int,
     db: Session = Depends(get_db),
