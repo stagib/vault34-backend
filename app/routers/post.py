@@ -18,7 +18,13 @@ from app.models import Post, Reaction, Vault
 from app.schemas.post import PostBase, PostCreate, PostResponse
 from app.schemas.reaction import ReactionBase
 from app.schemas.vault import VaultBaseResponse
-from app.types import RatingType, TargetType, ReactionType, FileType
+from app.types import (
+    RatingType,
+    TargetType,
+    ReactionType,
+    FileType,
+    PrivacyType,
+)
 from app.utils import update_reaction_count
 from app.utils.auth import get_user, get_search_id
 from app.utils.post import log_post_metric, update_top_vaults
@@ -170,7 +176,12 @@ def get_post_vault_recommendation(post_id: int, db: Session = Depends(get_db)):
     top_vaults = db.query(Post.top_vaults).filter(Post.id == post_id).first()
     if top_vaults[0]:
         ids = [int(id) for id in top_vaults[0]]
-        vaults = db.query(Vault).filter(Vault.id.in_(ids)).limit(4).all()
+        vaults = (
+            db.query(Vault)
+            .filter(Vault.id.in_(ids), Vault.privacy == PrivacyType.PUBLIC)
+            .limit(4)
+            .all()
+        )
     return vaults
 
 

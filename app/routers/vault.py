@@ -64,8 +64,11 @@ def create_vault(
 
 @router.get("/vaults/recommend", response_model=Page[VaultBaseResponse])
 def get_vault_recommendation(db: Session = Depends(get_db)):
-    # change later
-    vaults = db.query(Vault).order_by(desc(Vault.likes))
+    vaults = (
+        db.query(Vault)
+        .order_by(desc(Vault.score))
+        .filter(Vault.privacy == PrivacyType.PUBLIC)
+    )
     return paginate(vaults)
 
 
