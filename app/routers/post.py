@@ -66,6 +66,8 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
             top_tags=random_tags,
             score=post.score,
             week_score=post.score,
+            month_score=post.score,
+            year_score=post.score,
             type=type,
         )
         post_objs.append(new_post)
