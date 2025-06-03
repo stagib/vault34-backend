@@ -92,11 +92,13 @@ def get_user_vaults(
         raise HTTPException(status_code=404, detail="User not found")
 
     if user and user.id == query_user.id:
-        vaults = query_user.vaults.order_by(desc(Vault.date_created))
-    else:
-        vaults = query_user.vaults.order_by(desc(Vault.date_created)).filter(
-            Vault.privacy == PrivacyType.PUBLIC
+        vaults = query_user.vaults.order_by(
+            desc(Vault.score), desc(Vault.post_count), desc(Vault.date_created)
         )
+    else:
+        vaults = query_user.vaults.order_by(
+            desc(Vault.score), desc(Vault.post_count), desc(Vault.date_created)
+        ).filter(Vault.privacy == PrivacyType.PUBLIC)
 
     paginated_vaults = paginate(vaults)
     return paginated_vaults
