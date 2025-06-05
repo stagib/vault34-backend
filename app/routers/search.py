@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, timedelta
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi_pagination import Page
@@ -14,7 +15,7 @@ from app.models import Post, Search, Vault
 from app.schemas.post import PostBase
 from app.schemas.search import SearchResponse
 from app.schemas.vault import VaultBaseResponse
-from app.types import OrderType, RatingType
+from app.types import OrderType, RatingType, FileType
 from app.utils import normalize_text
 from app.utils.search import log_search_metric
 
@@ -62,6 +63,7 @@ def search_posts(
     query: str = Query(None),
     rating: RatingType = Query(RatingType.EXPLICIT),
     order: OrderType = Query(OrderType.TRENDING),
+    type: Optional[FileType] = Query(None),
     db: Session = Depends(get_db),
 ):
     now = datetime.now(timezone.utc)
@@ -70,6 +72,9 @@ def search_posts(
 
     if rating == RatingType.QUESTIONABLE:
         posts = posts.filter(Post.rating == RatingType.QUESTIONABLE)
+
+    if type:
+        posts = posts.filter(Post.type == type)
 
     if query:
         normalized_query = normalize_text(query)
