@@ -28,7 +28,9 @@ class User(Base):
     __tablename__ = "user"
     id = Column(Integer, primary_key=True, index=True)
     date_created = Column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc)
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        nullable=False,
     )
 
     username = Column(String, nullable=False)
@@ -42,7 +44,9 @@ class VaultPost(Base):
     __tablename__ = "vault_post"
     id = Column(Integer, primary_key=True, index=True)
     date_created = Column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc)
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        nullable=False,
     )
     index = Column(Integer, default=0, nullable=False)
     vault_id = Column(
@@ -60,7 +64,7 @@ class Post(Base):
     __tablename__ = "post"
     id = Column(Integer, primary_key=True, index=True)
     date_created = Column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc), index=True
+        DateTime(timezone=True), default=datetime.now(timezone.utc)
     )
 
     title = Column(String, default="")
@@ -73,15 +77,33 @@ class Post(Base):
     type = Column(Enum(FileType), nullable=False, default=FileType.IMAGE)
     tags = Column(String)
     top_tags = Column(JSONB, nullable=False, default=[])
-    top_vaults = Column(JSONB, nullable=False, default=[])  # change later
+    top_vaults = Column(JSONB, nullable=False, default=[])
     source = Column(String)
-    likes = Column(Integer, default=0)
-    dislikes = Column(Integer, default=0)
-    saves = Column(Integer, default=0)
-    comment_count = Column(Integer, default=0)
+    likes = Column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+    dislikes = Column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+    saves = Column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+    comment_count = Column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
     embedding = Column(Vector(512))
     last_updated = Column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc)
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        nullable=False,
     )
 
     score = Column(Float, nullable=False, default=0, index=True)
@@ -97,7 +119,9 @@ class Vault(Base):
     __tablename__ = "vault"
     id = Column(Integer, primary_key=True, index=True)
     date_created = Column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc)
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        nullable=False,
     )
 
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
@@ -112,7 +136,9 @@ class Vault(Base):
         Enum(PrivacyType), nullable=False, default=PrivacyType.PRIVATE
     )
     last_updated = Column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc)
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        nullable=False,
     )
 
     score = Column(Float, default=0, index=True)
@@ -131,7 +157,9 @@ class Comment(Base):
     __tablename__ = "comment"
     id = Column(Integer, primary_key=True, index=True)
     date_created = Column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc)
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        nullable=False,
     )
 
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
@@ -148,7 +176,9 @@ class Reaction(Base):
     __tablename__ = "reaction"
     id = Column(Integer, primary_key=True, index=True)
     date_created = Column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc)
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        nullable=False,
     )
 
     user_id = Column(Integer, nullable=False)
@@ -171,7 +201,9 @@ class Search(Base):
     __tablename__ = "search"
     query = Column(String, primary_key=True, index=True, unique=True)
     last_updated = Column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc)
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        nullable=False,
     )
     score = Column(Integer, default=1, index=True)
     week_score = Column(Integer, default=1, index=True)
@@ -185,7 +217,9 @@ class SearchMetric(Base):
     id = Column(Integer, primary_key=True, index=True)
     query = Column(String, index=True)
     date_created = Column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc)
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        nullable=False,
     )
     score = Column(Integer, default=1)
 
@@ -198,7 +232,9 @@ class VaultMetric(Base):
     __tablename__ = "vault_metric"
     id = Column(Integer, primary_key=True, index=True)
     date_created = Column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc)
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        nullable=False,
     )
     vault_id = Column(Integer, ForeignKey("vault.id"), nullable=False)
     score = Column(Float, default=0)
@@ -212,7 +248,9 @@ class PostMetric(Base):
     __tablename__ = "post_metric"
     id = Column(Integer, primary_key=True, index=True)
     date_created = Column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc)
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        nullable=False,
     )
     post_id = Column(Integer, ForeignKey("post.id"), nullable=False)
     score = Column(Float, default=0)
