@@ -35,14 +35,6 @@ def create_vault(
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    db_vault = (
-        db.query(Vault)
-        .filter(Vault.user_id == user.id, Vault.title == vault.title)
-        .first()
-    )
-    if db_vault:
-        raise HTTPException(status_code=409, detail="Vault already exists")
-
     new_vault = Vault(
         title=vault.title, user_id=user.id, privacy=vault.privacy
     )
