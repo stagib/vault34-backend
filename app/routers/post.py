@@ -4,7 +4,7 @@ from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi_pagination.cursor import CursorPage
 import numpy
 import random
-from sqlalchemy import desc, Select
+from sqlalchemy import desc, Select, exists
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -41,6 +41,12 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
         raise HTTPException(status_code=422, detail="Unprocessable Entity")
 
     for post in posts:
+        prev_post = db.query(
+            exists().where(Post.source_id == post.post_id)
+        ).scalar()
+        if prev_post:
+            continue
+
         rating = RatingType.EXPLICIT
         if post.rating == RatingType.QUESTIONABLE.value:
             rating = RatingType.QUESTIONABLE
@@ -55,6 +61,7 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
             random_tags = random.sample(split_tags, 5)
 
         new_post = Post(
+            source_id=post.post_id,
             title=post.tags,
             preview_url=post.preview_url,
             sample_url=post.sample_url,
@@ -74,8 +81,9 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
 
     try:
         db.add_all(post_objs)
-        db.flush()
-        """ for post in post_objs:
+
+        """ db.flush()
+        for post in post_objs:
             data = {
                 "id": post.id,
                 "date_created": post.date_created,
@@ -83,7 +91,7 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
             }
             neo4j_data.append(data)
 
-        session.execute_write(create_posts_, neo4j_data) """
+        session.execute_write(create_posts_, neo4j_data)  """
         db.commit()
     except Exception:
         db.rollback()
@@ -159,11 +167,11 @@ def get_post_recommendation(
     post_id: int,
     db: Session = Depends(get_db),
 ):
-    post = db.get(Post, post_id)
-    if not post:
+    embedding = db.query(Post.embedding).filter(Post.id == post_id).scalar()
+    if embedding is None:
         raise HTTPException(status_code=404, detail="Post not found")
 
-    vector = numpy.array(post.embedding).tolist()
+    vector = numpy.array(embedding).tolist()
     posts = db.query(
         Post.id, Post.sample_url, Post.preview_url, Post.type
     ).order_by(Post.embedding.cosine_distance(vector), desc(Post.score))

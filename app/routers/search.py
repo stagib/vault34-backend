@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.cursor import CursorPage
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import and_, desc, Select
+from sqlalchemy import and_, desc, Select, or_
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -44,7 +44,14 @@ def filter_posts(posts, query):
     words = query.lower().split()
     words = [word.strip() for word in words]
     conditions = [Post.tags.ilike(f"%{word}%") for word in words]
-    p = posts.filter(and_(*conditions))
+
+    if query.isdigit():
+        int_query = int(query)
+        p = posts.filter(
+            or_(Post.id == int_query, Post.source_id == int_query)
+        )
+    else:
+        p = posts.filter(and_(*conditions))
     return p
 
 

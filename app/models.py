@@ -78,6 +78,7 @@ class Post(Base):
     tags = Column(String)
     top_tags = Column(JSONB, nullable=False, default=[])
     top_vaults = Column(JSONB, nullable=False, default=[])
+    source_id = Column(Integer, index=True)
     source = Column(String)
     likes = Column(
         Integer,

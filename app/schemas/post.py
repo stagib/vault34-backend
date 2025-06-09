@@ -15,7 +15,6 @@ class PostBase(BaseModel):
 class PostResponse(BaseModel):
     id: int
     date_created: datetime
-    preview_url: str
     sample_url: str
     file_url: str
     source: str
@@ -23,7 +22,6 @@ class PostResponse(BaseModel):
     top_tags: list[str]
     rating: str
     type: str
-    score: float
     likes: int
     dislikes: int
     user_reaction: ReactionType = ReactionType.NONE
