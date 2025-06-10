@@ -15,6 +15,7 @@ class PostBase(BaseModel):
 class PostResponse(BaseModel):
     id: int
     date_created: datetime
+    preview_url: str
     sample_url: str
     file_url: str
     source: str
