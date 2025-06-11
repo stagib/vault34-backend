@@ -49,9 +49,6 @@ def create_post_log(post: Post):
     post_metric = PostMetric(
         post_id=post.id,
         score=post.score,
-        week_score=post.week_score,
-        month_score=post.month_score,
-        year_score=post.year_score,
         trend_score=post.trend_score,
     )
     return post_metric

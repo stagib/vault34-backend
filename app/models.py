@@ -80,26 +80,10 @@ class Post(Base):
     top_vaults = Column(JSONB, nullable=False, default=[])
     source_id = Column(Integer, index=True)
     source = Column(String)
-    likes = Column(
-        Integer,
-        default=0,
-        nullable=False,
-    )
-    dislikes = Column(
-        Integer,
-        default=0,
-        nullable=False,
-    )
-    saves = Column(
-        Integer,
-        default=0,
-        nullable=False,
-    )
-    comment_count = Column(
-        Integer,
-        default=0,
-        nullable=False,
-    )
+    likes = Column(Integer, default=0, nullable=False)
+    dislikes = Column(Integer, default=0, nullable=False)
+    saves = Column(Integer, default=0, nullable=False)
+    comment_count = Column(Integer, default=0, nullable=False)
     embedding = Column(Vector(512))
     last_updated = Column(
         DateTime(timezone=True),
@@ -200,7 +184,9 @@ class Reaction(Base):
 
 class Search(Base):
     __tablename__ = "search"
-    query = Column(String, primary_key=True, index=True, unique=True)
+    query = Column(
+        String, primary_key=True, index=True, unique=True, nullable=False
+    )
     last_updated = Column(
         DateTime(timezone=True),
         default=datetime.now(timezone.utc),
@@ -216,13 +202,13 @@ class Search(Base):
 class SearchMetric(Base):
     __tablename__ = "search_metric"
     id = Column(Integer, primary_key=True, index=True)
-    query = Column(String, index=True)
+    query = Column(String, index=True, nullable=False)
     date_created = Column(
         DateTime(timezone=True),
         default=datetime.now(timezone.utc),
         nullable=False,
     )
-    score = Column(Integer, default=1)
+    score = Column(Integer, default=1, nullable=False)
 
     __table_args__ = (
         Index("ix_search_query_date_created", "query", "date_created"),
@@ -238,7 +224,7 @@ class VaultMetric(Base):
         nullable=False,
     )
     vault_id = Column(Integer, ForeignKey("vault.id"), nullable=False)
-    score = Column(Float, default=0)
+    score = Column(Float, default=0, nullable=False)
 
     __table_args__ = (
         Index("ix_vault_id_date_created", "vault_id", "date_created"),
@@ -254,11 +240,8 @@ class PostMetric(Base):
         nullable=False,
     )
     post_id = Column(Integer, ForeignKey("post.id"), nullable=False)
-    score = Column(Float, default=0)
-    week_score = Column(Float, default=0)
-    month_score = Column(Float, default=0)
-    year_score = Column(Float, default=0)
-    trend_score = Column(Float, default=0)
+    score = Column(Float, default=0, nullable=False)
+    trend_score = Column(Float, default=0, nullable=False)
 
     __table_args__ = (
         Index("ix_post_id_date_created", "post_id", "date_created"),
