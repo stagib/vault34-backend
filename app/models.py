@@ -35,7 +35,6 @@ class User(Base):
 
     username = Column(String, nullable=False)
     password = Column(String, nullable=False)
-    history = Column(String, nullable=False, default="")
     comments = relationship("Comment", back_populates="user", lazy="dynamic")
     vaults = relationship("Vault", back_populates="user", lazy="dynamic")
 
@@ -113,9 +112,9 @@ class Vault(Base):
     title = Column(String, nullable=False)
     description = Column(String)
     previews = Column(JSONB, nullable=False, default=[])
-    post_count = Column(Integer, default=0)
-    likes = Column(Integer, default=0)
-    dislikes = Column(Integer, default=0)
+    post_count = Column(Integer, default=0, nullable=False)
+    likes = Column(Integer, default=0, nullable=False)
+    dislikes = Column(Integer, default=0, nullable=False)
     layout = Column(String, default="")
     privacy = Column(
         Enum(PrivacyType), nullable=False, default=PrivacyType.PRIVATE
@@ -126,11 +125,11 @@ class Vault(Base):
         nullable=False,
     )
 
-    score = Column(Float, default=0, index=True)
-    week_score = Column(Float, default=0, index=True)
-    month_score = Column(Float, default=0, index=True)
-    year_score = Column(Float, default=0, index=True)
-    trend_score = Column(Float, default=0, index=True)
+    score = Column(Float, default=0, index=True, nullable=False)
+    week_score = Column(Float, default=0, index=True, nullable=False)
+    month_score = Column(Float, default=0, index=True, nullable=False)
+    year_score = Column(Float, default=0, index=True, nullable=False)
+    trend_score = Column(Float, default=0, index=True, nullable=False)
 
     user = relationship("User", back_populates="vaults")
     vault_posts = relationship(
@@ -150,8 +149,8 @@ class Comment(Base):
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     post_id = Column(Integer, ForeignKey("post.id"), nullable=False)
     content = Column(String, nullable=False)
-    likes = Column(Integer, default=0)
-    dislikes = Column(Integer, default=0)
+    likes = Column(Integer, default=0, nullable=False)
+    dislikes = Column(Integer, default=0, nullable=False)
 
     post = relationship("Post", back_populates="comments")
     user = relationship("User", back_populates="comments")
@@ -192,11 +191,11 @@ class Search(Base):
         default=datetime.now(timezone.utc),
         nullable=False,
     )
-    score = Column(Integer, default=1, index=True)
-    week_score = Column(Integer, default=1, index=True)
-    month_score = Column(Integer, default=1, index=True)
-    year_score = Column(Integer, default=1, index=True)
-    trend_score = Column(Integer, default=0, index=True)
+    score = Column(Integer, default=1, index=True, nullable=False)
+    week_score = Column(Integer, default=1, index=True, nullable=False)
+    month_score = Column(Integer, default=1, index=True, nullable=False)
+    year_score = Column(Integer, default=1, index=True, nullable=False)
+    trend_score = Column(Integer, default=0, index=True, nullable=False)
 
 
 class SearchMetric(Base):
