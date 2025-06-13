@@ -64,7 +64,9 @@ class Post(Base):
     __tablename__ = "post"
     id = Column(Integer, primary_key=True, index=True)
     date_created = Column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc)
+        DateTime(timezone=True),
+        default=datetime.now(timezone.utc),
+        nullable=False,
     )
 
     title = Column(String, default="")
