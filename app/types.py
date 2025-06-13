@@ -36,3 +36,8 @@ class OrderType(Enum):
     POPULAR_MONTH = "popular_month"
     POPULAR_YEAR = "popular_year"
     NEWEST = "newest"
+
+
+class LayoutType(Enum):
+    MASONRY = "masonry"
+    GRID = "grid"

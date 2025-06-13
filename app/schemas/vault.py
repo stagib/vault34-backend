@@ -5,7 +5,7 @@ from typing import Optional
 
 from app.schemas.post import PostBase, PostResponse
 from app.schemas.user import UserBase
-from app.types import PrivacyType, ReactionType
+from app.types import PrivacyType, ReactionType, LayoutType
 
 
 class VaultPostBase(BaseModel):
@@ -22,9 +22,9 @@ class EntryResponse(BaseModel):
 
 
 class VaultBase(BaseModel):
-    title: str = Field(..., min_length=1, max_length=30)
+    title: str = Field(..., min_length=1, max_length=100)
     privacy: PrivacyType
-    layout: str = Field(..., min_length=1, max_length=30)
+    layout: LayoutType
 
 
 class VaultBaseResponse(BaseModel):

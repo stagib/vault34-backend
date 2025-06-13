@@ -21,6 +21,7 @@ from app.types import (
     TargetType,
     RatingType,
     FileType,
+    LayoutType,
 )
 
 
@@ -33,8 +34,8 @@ class User(Base):
         nullable=False,
     )
 
-    username = Column(String, nullable=False)
-    password = Column(String, nullable=False)
+    username = Column(String(30), nullable=False)
+    password = Column(String(100), nullable=False)
     comments = relationship("Comment", back_populates="user", lazy="dynamic")
     vaults = relationship("Vault", back_populates="user", lazy="dynamic")
 
@@ -109,15 +110,17 @@ class Vault(Base):
     )
 
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
-    title = Column(String, nullable=False)
+    title = Column(String(100), nullable=False)
     description = Column(String)
     previews = Column(JSONB, nullable=False, default=[])
     post_count = Column(Integer, default=0, nullable=False)
     likes = Column(Integer, default=0, nullable=False)
     dislikes = Column(Integer, default=0, nullable=False)
-    layout = Column(String, default="")
+    layout = Column(
+        Enum(LayoutType), default=LayoutType.MASONRY, nullable=False
+    )
     privacy = Column(
-        Enum(PrivacyType), nullable=False, default=PrivacyType.PRIVATE
+        Enum(PrivacyType), default=PrivacyType.PRIVATE, nullable=False
     )
     last_updated = Column(
         DateTime(timezone=True),
