@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from pydantic import BaseModel
+from typing import Optional
 
 from app.types import ReactionType
 
@@ -38,6 +39,6 @@ class PostCreate(BaseModel):
     rating: str
     tags: str
     source: str
-    score: int
+    score: Optional[int] = 0
     embedding: list[float]
     type: str
