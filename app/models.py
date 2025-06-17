@@ -188,9 +188,7 @@ class Reaction(Base):
 
 class Search(Base):
     __tablename__ = "search"
-    query = Column(
-        String, primary_key=True, index=True, unique=True, nullable=False
-    )
+    query = Column(String, primary_key=True)
     last_updated = Column(
         DateTime(timezone=True),
         default=datetime.now(timezone.utc),
