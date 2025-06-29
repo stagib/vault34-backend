@@ -71,6 +71,7 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
             source=post.source,
             embedding=post.embedding,
             top_tags=random_tags,
+            likes=post.score,
             score=post.score,
             week_score=post.score,
             month_score=post.score,
