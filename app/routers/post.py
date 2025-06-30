@@ -1,5 +1,6 @@
+from typing import Optional
 from datetime import datetime, timezone, timedelta
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi_pagination.cursor import CursorPage
 import numpy
@@ -166,6 +167,8 @@ def update_post(
 @router.get("/posts/{post_id}/recommend", response_model=CursorPage[PostBase])
 def get_post_recommendation(
     post_id: int,
+    type: Optional[FileType] = Query(None),
+    rating: RatingType = Query(RatingType.EXPLICIT),
     db: Session = Depends(get_db),
 ):
     embedding = db.query(Post.embedding).filter(Post.id == post_id).scalar()
@@ -176,6 +179,12 @@ def get_post_recommendation(
     posts = db.query(
         Post.id, Post.sample_url, Post.preview_url, Post.type
     ).order_by(Post.embedding.cosine_distance(vector), desc(Post.score))
+
+    if type:
+        posts = posts.filter(Post.type == type)
+
+    if rating == RatingType.QUESTIONABLE:
+        posts = posts.filter(Post.rating == RatingType.QUESTIONABLE)
     return paginate(posts)
 
 
