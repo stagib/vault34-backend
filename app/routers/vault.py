@@ -36,7 +36,11 @@ def create_vault(
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     new_vault = Vault(
-        title=vault.title, user_id=user.id, privacy=vault.privacy
+        user_id=user.id,
+        title=vault.title,
+        description=vault.description,
+        privacy=vault.privacy,
+        layout=vault.layout,
     )
 
     try:
@@ -48,7 +52,6 @@ def create_vault(
 
         db.commit()
     except Exception as e:
-        print(e)
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal error")
     return new_vault
@@ -108,6 +111,7 @@ def update_vault(
         raise HTTPException(status_code=404, detail="Vault not found")
 
     db_vault.title = vault.title
+    db_vault.description = vault.description
     db_vault.privacy = vault.privacy
     db_vault.layout = vault.layout
 

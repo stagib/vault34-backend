@@ -23,6 +23,7 @@ class EntryResponse(BaseModel):
 
 class VaultBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=100)
+    description: str = Field(..., min_length=0, max_length=100)
     privacy: PrivacyType
     layout: LayoutType
 
@@ -30,8 +31,11 @@ class VaultBase(BaseModel):
 class VaultBaseResponse(BaseModel):
     id: int
     title: str
+    description: str
     post_count: int
     previews: list[str]
+    privacy: PrivacyType
+    layout: str
     user: UserBase
 
 
@@ -39,6 +43,7 @@ class VaultResponse(BaseModel):
     id: int
     date_created: datetime
     title: str
+    description: str
     privacy: PrivacyType
     layout: str
     post_count: int
