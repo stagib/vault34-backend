@@ -61,6 +61,10 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
         if len(split_tags) >= 5:
             random_tags = random.sample(split_tags, 5)
 
+        ai_generated = False
+        if "ai_generated" in post.tags:
+            ai_generated = True
+
         new_post = Post(
             source_id=post.post_id,
             title=post.tags,
@@ -68,7 +72,6 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
             sample_url=post.sample_url,
             file_url=post.file_url,
             rating=rating,
-            tags=post.tags,
             source=post.source,
             embedding=post.embedding,
             top_tags=random_tags,
@@ -78,6 +81,7 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
             month_score=post.score,
             year_score=post.score,
             type=type,
+            ai_generated=ai_generated,
         )
         post_objs.append(new_post)
 
@@ -167,8 +171,9 @@ def update_post(
 @router.get("/posts/{post_id}/recommend", response_model=CursorPage[PostBase])
 def get_post_recommendation(
     post_id: int,
-    type: Optional[FileType] = Query(None),
+    type: FileType = Query(None),
     rating: RatingType = Query(RatingType.EXPLICIT),
+    filter_ai: bool = False,
     db: Session = Depends(get_db),
 ):
     embedding = db.query(Post.embedding).filter(Post.id == post_id).scalar()
@@ -185,6 +190,9 @@ def get_post_recommendation(
 
     if rating == RatingType.QUESTIONABLE:
         posts = posts.filter(Post.rating == RatingType.QUESTIONABLE)
+
+    if filter_ai:
+        posts = posts.filter(Post.ai_generated == False)
     return paginate(posts)
 
 

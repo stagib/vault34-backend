@@ -10,6 +10,7 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    Boolean,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
@@ -86,6 +87,7 @@ class Post(Base):
     dislikes = Column(Integer, default=0, nullable=False)
     saves = Column(Integer, default=0, nullable=False)
     comment_count = Column(Integer, default=0, nullable=False)
+    ai_generated = Column(Boolean, default=False, nullable=False)
     embedding = Column(Vector(512))
     last_updated = Column(
         DateTime(timezone=True),

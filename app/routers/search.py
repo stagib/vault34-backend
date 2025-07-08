@@ -43,7 +43,7 @@ def order_posts(posts, order):
 def filter_posts(posts, query):
     words = query.lower().split()
     words = [word.strip() for word in words]
-    conditions = [Post.tags.ilike(f"%{word}%") for word in words]
+    conditions = [Post.title.ilike(f"%{word}%") for word in words]
 
     if query.isdigit():
         int_query = int(query)
@@ -67,10 +67,11 @@ def update_search_count(db: Session, query: str):
 
 @router.get("/posts", response_model=CursorPage[PostBase])
 def search_posts(
-    query: str = Query(None),
-    rating: RatingType = Query(RatingType.EXPLICIT),
-    order: OrderType = Query(OrderType.TRENDING),
-    type: Optional[FileType] = Query(None),
+    query: str = None,
+    rating: RatingType = RatingType.EXPLICIT,
+    order: OrderType = OrderType.TRENDING,
+    type: FileType = None,
+    filter_ai: bool = False,
     db: Session = Depends(get_db),
 ):
     now = datetime.now(timezone.utc)
@@ -82,6 +83,9 @@ def search_posts(
 
     if type:
         posts = posts.filter(Post.type == type)
+
+    if filter_ai:
+        posts = posts.filter(Post.ai_generated == False)
 
     if query:
         normalized_query = normalize_text(query)
