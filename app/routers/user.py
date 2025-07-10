@@ -7,10 +7,11 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 
 """ from app.db.neo4j import create_user_ """
-from app.models import User, Vault
+from app.models import User, Vault, Post, Reaction
 from app.schemas.user import UserCreate, UserResponse
 from app.schemas.vault import VaultBaseResponse
-from app.types import PrivacyType
+from app.schemas.post import PostBase
+from app.types import PrivacyType, ReactionType, TargetType
 from app.utils.auth import (
     create_token,
     get_user,
@@ -102,6 +103,30 @@ def get_user_vaults(
 
     paginated_vaults = paginate(vaults)
     return paginated_vaults
+
+
+@router.get("/users/{user_id}/reactions", response_model=Page[PostBase])
+def get_user_reaction(
+    user_id: int,
+    type: ReactionType = ReactionType.LIKE,
+    db: Session = Depends(get_db),
+):
+    reactions = (
+        db.query(Reaction.target_id)
+        .filter(
+            Reaction.user_id == user_id,
+            Reaction.target_type == TargetType.POST,
+            Reaction.type == type,
+        )
+        .limit(1000)
+        .all()
+    )
+
+    post_ids = [id for (id,) in reactions]
+    posts = db.query(
+        Post.id, Post.sample_url, Post.preview_url, Post.type
+    ).filter(Post.id.in_(post_ids))
+    return paginate(posts)
 
 
 """ @router.post("/users/{user_id}/followers")
