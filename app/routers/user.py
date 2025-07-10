@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi_pagination import Page
-from fastapi_pagination.cursor import CursorPage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
@@ -8,11 +7,10 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 
 """ from app.db.neo4j import create_user_ """
-from app.models import User, Vault, Reaction, Post
+from app.models import User, Vault
 from app.schemas.user import UserCreate, UserResponse
 from app.schemas.vault import VaultBaseResponse
-from app.schemas.post import PostBase
-from app.types import PrivacyType, ReactionType, TargetType
+from app.types import PrivacyType
 from app.utils.auth import (
     create_token,
     get_user,
@@ -104,27 +102,6 @@ def get_user_vaults(
 
     paginated_vaults = paginate(vaults)
     return paginated_vaults
-
-
-@router.get("/users/{user_id}/reactions", response_model=Page[PostBase])
-def get_user_reactions(
-    user_id: int,
-    type: ReactionType = ReactionType.NONE,
-    db: Session = Depends(get_db),
-):
-    reactions = db.query(Reaction.target_id).filter(
-        Reaction.user_id == user_id, Reaction.target_type == TargetType.POST
-    )
-
-    if type != ReactionType.NONE:
-        reactions = reactions.filter(Reaction.type == type)
-
-    reactions = reactions.limit(1000).all()
-    post_ids = [id for (id,) in reactions]
-    posts = db.query(
-        Post.id, Post.sample_url, Post.preview_url, Post.type
-    ).filter(Post.id.in_(post_ids))
-    return paginate(posts)
 
 
 """ @router.post("/users/{user_id}/followers")
