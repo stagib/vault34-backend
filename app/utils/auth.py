@@ -40,14 +40,14 @@ def create_token(username: str, user_id: int, expire_date: datetime):
 
 
 def get_user(
-    auth_token: Annotated[str | None, Cookie()] = None,
+    v34_auth: Annotated[str | None, Cookie()] = None,
     db: Session = Depends(get_db),
 ):
-    if not auth_token:
+    if not v34_auth:
         return None
     try:
         payload = jwt.decode(
-            auth_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+            v34_auth, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
         )
         user_id = payload.get("id")
         if not user_id or user_id is None:
