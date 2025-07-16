@@ -1,79 +1,19 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
-from app.db import get_db
-
 """ from app.db.neo4j import create_user_ """
+from app.db import get_db
 from app.models import User, Vault, Post, Reaction
-from app.schemas.user import UserCreate, UserResponse
+from app.schemas.user import UserResponse
 from app.schemas.vault import VaultBaseResponse
 from app.schemas.post import PostBase
 from app.types import PrivacyType, ReactionType, TargetType
-from app.utils.auth import (
-    create_token,
-    get_user,
-    hash_password,
-    verify_password,
-)
+from app.utils.auth import get_user
 
 router = APIRouter(tags=["User"])
-
-
-@router.post("/users")
-def register_user(
-    response: Response, user: UserCreate, db: Session = Depends(get_db)
-):
-    db_user = db.query(User).filter(User.username == user.username).first()
-    if db_user:
-        raise HTTPException(
-            status_code=400, detail="Username is already taken"
-        )
-
-    hashed_password = hash_password(user.password)
-    new_user = User(username=user.username, password=hashed_password)
-
-    try:
-        db.add(new_user)
-        db.flush()
-
-        """ with driver.session() as session:
-            session.execute_write(create_user_, new_user) """
-
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail="Internal error")
-
-    token = create_token(id=new_user.id)
-    response.set_cookie(key="auth_token", value=token)
-    return {"detail": "User registered"}
-
-
-@router.post("/users/login")
-def login(response: Response, user: UserCreate, db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.username == user.username).first()
-    if not db_user:
-        raise HTTPException(
-            status_code=404, detail="Username or password is incorrect"
-        )
-
-    if not verify_password(db_user.password, user.password):
-        raise HTTPException(
-            status_code=401, detail="Username or password is incorrect"
-        )
-
-    token = create_token(id=db_user.id)
-    response.set_cookie(key="auth_token", value=token)
-    return {"detail": "Logged in"}
-
-
-@router.post("/users/logout")
-def logout(response: Response):
-    response.delete_cookie("auth_token")
-    return {"detail": "Logged out"}
 
 
 @router.get("/users/{user_id}", response_model=UserResponse)
