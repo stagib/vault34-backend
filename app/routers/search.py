@@ -1,12 +1,12 @@
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi_pagination import Page
 from fastapi_pagination.cursor import CursorPage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from sqlalchemy import and_, desc, Select, or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, Query
 
 from app.db import get_db
 
@@ -38,6 +38,24 @@ def order_posts(posts, order):
     else:
         p = posts.order_by(desc(Post.trend_score))
     return p
+
+
+def order_vaults(query: Query, order: OrderType):
+    if order == OrderType.TRENDING:
+        q = query.order_by(desc(Vault.trend_score))
+    elif order == OrderType.POPULAR:
+        q = query.order_by(desc(Vault.score))
+    elif order == OrderType.POPULAR_WEEK:
+        q = query.order_by(desc(Vault.week_score))
+    elif order == OrderType.POPULAR_MONTH:
+        q = query.order_by(desc(Vault.month_score))
+    elif order == OrderType.POPULAR_YEAR:
+        q = query.order_by(desc(Vault.year_score))
+    elif order == OrderType.NEWEST:
+        q = query.order_by(desc(Vault.date_created))
+    else:
+        q = query.order_by(desc(Vault.trend_score))
+    return q
 
 
 def filter_posts(posts, query):
@@ -115,20 +133,27 @@ def search_posts(
 
 
 @router.get("/vaults", response_model=Page[VaultBaseResponse])
-def get_vaults(query: str = Query(None), db: Session = Depends(get_db)):
-    vaults = db.query(Vault).order_by(Vault.likes)
+def get_vaults(
+    query: str = None,
+    order: OrderType = OrderType.POPULAR,
+    db: Session = Depends(get_db),
+):
+    vaults = db.query(Vault)
+    vaults = order_vaults(vaults, order)
+
     if query:
         normalized_query = normalize_text(query)
         words = normalized_query.lower().split()
         words = [word.strip() for word in words]
         conditions = [Vault.title.ilike(f"%{word}%") for word in words]
         vaults = vaults.filter(and_(*conditions))
+
     return paginate(vaults)
 
 
 @router.get("/searches", response_model=list[SearchResponse])
 def get_searches(
-    query: str = Query(None),
+    query: str = None,
     db: Session = Depends(get_db),
 ):
     stmt = Select(Search.query, Search.score).order_by(desc(Search.score))
