@@ -39,6 +39,24 @@ def create_token(username: str, user_id: int, expire_date: datetime):
     return token
 
 
+def verify_token(v34_auth: Annotated[str | None, Cookie()] = None):
+    if not v34_auth:
+        return None
+    payload = jwt.decode(
+        v34_auth, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+    )
+    try:
+        username = payload.get("username")
+        user_id = payload.get("id")
+        if not user_id or not username:
+            return None
+
+        user = {"username": username, "id": user_id}
+        return user
+    except:
+        return None
+
+
 def get_user(
     v34_auth: Annotated[str | None, Cookie()] = None,
     db: Session = Depends(get_db),

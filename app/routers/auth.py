@@ -7,17 +7,17 @@ from app.db import get_db
 from app.models import User
 from app.schemas.user import UserBase, UserCreate
 from app.utils.auth import (
-    get_user,
     hash_password,
     verify_password,
     create_token,
+    verify_token,
 )
 
 router = APIRouter(tags=["Auth"])
 
 
 @router.get("/auth/verify", response_model=UserBase)
-def verify_auth_token(user: dict = Depends(get_user)):
+def verify_auth_token(user: dict = Depends(verify_token)):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid token")
     return user
