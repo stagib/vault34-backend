@@ -11,7 +11,7 @@ from app.schemas.user import UserResponse
 from app.schemas.vault import VaultBaseResponse
 from app.schemas.post import PostBase
 from app.types import PrivacyType, ReactionType, TargetType
-from app.utils.auth import get_user
+from app.utils.auth import verify_token
 
 router = APIRouter(tags=["User"])
 
@@ -26,20 +26,24 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
 
 @router.get("/users/{user_id}/vaults", response_model=Page[VaultBaseResponse])
 def get_user_vaults(
-    user_id: int, user: dict = Depends(get_user), db: Session = Depends(get_db)
+    user_id: int,
+    user: dict = Depends(verify_token),
+    db: Session = Depends(get_db),
 ):
     query_user = db.query(User).filter(User.id == user_id).first()
     if not query_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user and user.id == query_user.id:
-        vaults = query_user.vaults.order_by(
+    vaults = (
+        db.query(Vault)
+        .filter(Vault.user_id == query_user.id)
+        .order_by(
             desc(Vault.score), desc(Vault.post_count), desc(Vault.date_created)
         )
-    else:
-        vaults = query_user.vaults.order_by(
-            desc(Vault.score), desc(Vault.post_count), desc(Vault.date_created)
-        ).filter(Vault.privacy == PrivacyType.PUBLIC)
+    )
+
+    if not user or user.id != query_user.id:
+        vaults = vaults.filter(Vault.privacy == PrivacyType.PUBLIC)
 
     paginated_vaults = paginate(vaults)
     return paginated_vaults

@@ -15,7 +15,7 @@ from app.models import Post, Search, Vault
 from app.schemas.post import PostBase
 from app.schemas.search import SearchResponse
 from app.schemas.vault import VaultBaseResponse
-from app.types import OrderType, RatingType, FileType
+from app.types import OrderType, RatingType, FileType, PrivacyType
 from app.utils import normalize_text
 from app.utils.search import log_search_metric
 
@@ -138,7 +138,7 @@ def get_vaults(
     order: OrderType = OrderType.POPULAR,
     db: Session = Depends(get_db),
 ):
-    vaults = db.query(Vault)
+    vaults = db.query(Vault).filter(Vault.privacy == PrivacyType.PUBLIC)
     vaults = order_vaults(vaults, order)
 
     if query:
