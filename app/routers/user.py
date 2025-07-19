@@ -42,7 +42,7 @@ def get_user_vaults(
         )
     )
 
-    if not user or user.id != query_user.id:
+    if not user or user.get("id") != query_user.id:
         vaults = vaults.filter(Vault.privacy == PrivacyType.PUBLIC)
 
     paginated_vaults = paginate(vaults)
