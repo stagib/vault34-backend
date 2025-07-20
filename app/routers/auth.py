@@ -48,7 +48,11 @@ def register_user(
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal error")
 
-    expire_date = datetime.now(timezone.utc) + timedelta(hours=12)
+    time: timedelta = timedelta(hours=12)
+    if user.remember_me:
+        time = timedelta(days=30)
+
+    expire_date = datetime.now(timezone.utc) + time
     token = create_token(new_user.username, new_user.id, expire_date)
     response.set_cookie(
         key="v34_auth",
@@ -73,7 +77,11 @@ def login(response: Response, user: UserCreate, db: Session = Depends(get_db)):
             status_code=401, detail="Username or password is incorrect"
         )
 
-    expire_date = datetime.now(timezone.utc) + timedelta(hours=12)
+    time: timedelta = timedelta(hours=12)
+    if user.remember_me:
+        time = timedelta(days=30)
+
+    expire_date = datetime.now(timezone.utc) + time
     token = create_token(db_user.username, db_user.id, expire_date)
     response.set_cookie(
         key="v34_auth",
