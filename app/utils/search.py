@@ -1,10 +1,36 @@
 from datetime import datetime, timezone, timedelta
 
-from sqlalchemy import desc, func
+from sqlalchemy import desc, func, and_, or_
 from sqlalchemy.orm import Session
 
-from app.models import Search, SearchMetric
+from app.models import Search, SearchMetric, Post
 from app.utils import calculate_trend_score
+
+
+def query_posts(posts, query):
+    words = query.lower().split()
+    words = [word.strip() for word in words]
+    conditions = [Post.title.ilike(f"%{word}%") for word in words]
+
+    if query.isdigit():
+        int_query = int(query)
+        p = posts.filter(
+            or_(Post.id == int_query, Post.source_id == int_query)
+        )
+    else:
+        p = posts.filter(and_(*conditions))
+    return p
+
+
+def create_post_title_filter(query: str):
+    if query.isdigit():
+        int_query = int(query)
+        filters = [or_(Post.id == int_query, Post.source_id == int_query)]
+    else:
+        words = query.split()
+        filters = [Post.title.ilike(f"%{word}%") for word in words]
+
+    return filters
 
 
 """ metric functions """
@@ -71,5 +97,4 @@ def log_search_metric(db: Session, search: Search, now: datetime):
         search.week_score = week_score
         search.month_score = month_score
         search.year_score = year_score
-        search.score = search.score + 1
         db.add(log)

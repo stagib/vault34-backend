@@ -1,91 +1,64 @@
 from datetime import datetime, timezone, timedelta
-from typing import Optional
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination import Page
 from fastapi_pagination.cursor import CursorPage
 from fastapi_pagination.ext.sqlalchemy import paginate
-from sqlalchemy import and_, desc, Select, or_
-from sqlalchemy.orm import Session, Query
+from sqlalchemy import and_, desc, Select
+from sqlalchemy.orm import Session
 
 from app.db import get_db
 
 """ from app.db.neo4j import log_search_ """
 from app.models import Post, Search, Vault
 from app.schemas.post import PostBase
-from app.schemas.search import SearchResponse
+from app.schemas.search import SearchBase
 from app.schemas.vault import VaultBaseResponse
 from app.types import OrderType, RatingType, FileType, PrivacyType
 from app.utils import normalize_text
-from app.utils.search import log_search_metric
+from app.utils.search import log_search_metric, create_post_title_filter
 
 router = APIRouter(tags=["Search"])
 
 
-def order_posts(posts, order):
+def get_post_order(order: OrderType):
     if order == OrderType.TRENDING:
-        p = posts.order_by(desc(Post.trend_score))
+        return desc(Post.trend_score)
     elif order == OrderType.POPULAR:
-        p = posts.order_by(desc(Post.score))
+        return desc(Post.score)
     elif order == OrderType.POPULAR_WEEK:
-        p = posts.order_by(desc(Post.week_score))
+        return desc(Post.week_score)
     elif order == OrderType.POPULAR_MONTH:
-        p = posts.order_by(desc(Post.month_score))
+        return desc(Post.month_score)
     elif order == OrderType.POPULAR_YEAR:
-        p = posts.order_by(desc(Post.year_score))
+        return desc(Post.year_score)
     elif order == OrderType.NEWEST:
-        p = posts.order_by(desc(Post.date_created))
+        return desc(Post.date_created)
     else:
-        p = posts.order_by(desc(Post.trend_score))
-    return p
+        return desc(Post.trend_score)
 
 
-def order_vaults(query: Query, order: OrderType):
+def get_vault_order(order: OrderType):
     if order == OrderType.TRENDING:
-        q = query.order_by(desc(Vault.trend_score))
+        return desc(Vault.trend_score)
     elif order == OrderType.POPULAR:
-        q = query.order_by(desc(Vault.score))
+        return desc(Vault.score)
     elif order == OrderType.POPULAR_WEEK:
-        q = query.order_by(desc(Vault.week_score))
+        return desc(Vault.week_score)
     elif order == OrderType.POPULAR_MONTH:
-        q = query.order_by(desc(Vault.month_score))
+        return desc(Vault.month_score)
     elif order == OrderType.POPULAR_YEAR:
-        q = query.order_by(desc(Vault.year_score))
+        return desc(Vault.year_score)
     elif order == OrderType.NEWEST:
-        q = query.order_by(desc(Vault.date_created))
+        return desc(Vault.date_created)
     else:
-        q = query.order_by(desc(Vault.trend_score))
-    return q
-
-
-def filter_posts(posts, query):
-    words = query.lower().split()
-    words = [word.strip() for word in words]
-    conditions = [Post.title.ilike(f"%{word}%") for word in words]
-
-    if query.isdigit():
-        int_query = int(query)
-        p = posts.filter(
-            or_(Post.id == int_query, Post.source_id == int_query)
-        )
-    else:
-        p = posts.filter(and_(*conditions))
-    return p
-
-
-def update_search_count(db: Session, query: str):
-    db_query = db.get(Search, query)
-    if db_query:
-        db_query.count += 1
-    else:
-        new_query = Search(query=query)
-        db.add(new_query)
-    db.commit()
+        return desc(Vault.trend_score)
 
 
 @router.get("/posts", response_model=CursorPage[PostBase])
 def search_posts(
-    query: str = None,
+    query: Annotated[str | None, Query(min_length=1, max_length=50)] = None,
     rating: RatingType = RatingType.EXPLICIT,
     order: OrderType = OrderType.TRENDING,
     type: FileType = None,
@@ -93,67 +66,69 @@ def search_posts(
     db: Session = Depends(get_db),
 ):
     now = datetime.now(timezone.utc)
-    posts = db.query(Post.id, Post.sample_url, Post.preview_url, Post.type)
-    posts = order_posts(posts, order)
+    filters = []
+    order_by = get_post_order(order)
 
     if rating == RatingType.QUESTIONABLE:
-        posts = posts.filter(Post.rating == RatingType.QUESTIONABLE)
+        filters.append(Post.rating == RatingType.QUESTIONABLE)
 
     if type:
-        posts = posts.filter(Post.type == type)
+        filters.append(Post.type == type)
 
     if filter_ai:
-        posts = posts.filter(Post.ai_generated == False)
+        filters.append(Post.ai_generated == False)
 
     if query:
         normalized_query = normalize_text(query)
-        posts = filter_posts(posts, normalized_query)
+        title_filters = create_post_title_filter(query)
+        filters.append(*title_filters)
         search = db.get(Search, normalized_query)
 
         if not search:
             search = Search(query=normalized_query, last_updated=now)
             db.add(search)
-
-        if search and search.last_updated + timedelta(days=1) < now:
-            search.last_updated = now
-            log_search_metric(db, search, now)
+        else:
+            search.score += 1
+            if search.last_updated + timedelta(days=1) < now:
+                search.last_updated = now
+                log_search_metric(db, search, now)
 
         try:
             db.commit()
         except Exception:
             raise HTTPException(status_code=500, detail="Internal error")
-        """ search_id = str(uuid4())
-        update_search_count(db, normalized_query)
-        log_search_(search_id, normalized_query, user)
 
-        response.set_cookie(
-            key="search_id", value=search_id, httponly=True, samesite="lax"
-        ) """
-    return paginate(posts)
+    posts = (
+        Select(Post.id, Post.sample_url, Post.preview_url, Post.type)
+        .where(and_(*filters))
+        .order_by(order_by)
+    )
+    return paginate(db, posts)
 
 
 @router.get("/vaults", response_model=Page[VaultBaseResponse])
 def get_vaults(
-    query: str = None,
+    query: Annotated[str | None, Query(min_length=1, max_length=50)] = None,
     order: OrderType = OrderType.POPULAR,
     db: Session = Depends(get_db),
 ):
-    vaults = db.query(Vault).filter(Vault.privacy == PrivacyType.PUBLIC)
-    vaults = order_vaults(vaults, order)
+    filters = []
+    filters.append(Vault.privacy == PrivacyType.PUBLIC)
+    order_by = get_vault_order(order)
 
     if query:
         normalized_query = normalize_text(query)
-        words = normalized_query.lower().split()
-        words = [word.strip() for word in words]
+        words = normalized_query.split()
         conditions = [Vault.title.ilike(f"%{word}%") for word in words]
-        vaults = vaults.filter(and_(*conditions))
+        filters.append(*conditions)
 
-    return paginate(vaults)
+    vaults = Select(Vault).where(and_(*filters)).order_by(order_by)
+    return paginate(db, vaults)
 
 
-@router.get("/searches", response_model=list[SearchResponse])
+@router.get("/searches", response_model=list[SearchBase])
 def get_searches(
-    query: str = None,
+    query: Annotated[str | None, Query(min_length=1, max_length=50)] = None,
     db: Session = Depends(get_db),
 ):
     stmt = Select(Search.query, Search.score).order_by(desc(Search.score))

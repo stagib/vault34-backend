@@ -1,5 +1,5 @@
 from pydantic import BaseModel
 
 
-class SearchResponse(BaseModel):
+class SearchBase(BaseModel):
     query: str

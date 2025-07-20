@@ -31,12 +31,9 @@ class VaultBase(BaseModel):
 class VaultBaseResponse(BaseModel):
     id: int
     title: str
-    description: str
     post_count: int
     previews: list[str]
     privacy: PrivacyType
-    layout: str
-    user: UserBase
 
 
 class VaultResponse(BaseModel):

@@ -1,11 +1,11 @@
-from typing import Optional
+from typing import Annotated
 from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi_pagination.cursor import CursorPage
 import numpy
 import random
-from sqlalchemy import desc, Select, exists
+from sqlalchemy import desc, Select, exists, and_
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -26,9 +26,10 @@ from app.types import (
     FileType,
     PrivacyType,
 )
-from app.utils import update_reaction_count
+from app.utils import update_reaction_count, normalize_text
 from app.utils.auth import get_user, get_search_id
 from app.utils.post import log_post_metric, update_top_vaults
+from app.utils.search import create_post_title_filter
 
 router = APIRouter(tags=["Post"])
 
@@ -171,29 +172,40 @@ def update_post(
 @router.get("/posts/{post_id}/recommend", response_model=CursorPage[PostBase])
 def get_post_recommendation(
     post_id: int,
-    type: FileType = Query(None),
-    rating: RatingType = Query(RatingType.EXPLICIT),
+    query: Annotated[str | None, Query(min_length=1, max_length=50)] = None,
+    type: FileType = None,
+    rating: RatingType = RatingType.EXPLICIT,
     filter_ai: bool = False,
     db: Session = Depends(get_db),
 ):
-    embedding = db.query(Post.embedding).filter(Post.id == post_id).scalar()
+    stmt = Select(Post.embedding).where(Post.id == post_id)
+    embedding = db.execute(stmt).scalar_one_or_none()
     if embedding is None:
         raise HTTPException(status_code=404, detail="Post not found")
 
+    filters = []
     vector = numpy.array(embedding).tolist()
-    posts = db.query(
-        Post.id, Post.sample_url, Post.preview_url, Post.type
-    ).order_by(Post.embedding.cosine_distance(vector), desc(Post.score))
+
+    if query:
+        normalized_query = normalize_text(query)
+        title_filters = create_post_title_filter(normalized_query)
+        filters.append(*title_filters)
 
     if type:
-        posts = posts.filter(Post.type == type)
+        filters.append(Post.type == type)
 
     if rating == RatingType.QUESTIONABLE:
-        posts = posts.filter(Post.rating == RatingType.QUESTIONABLE)
+        filters.append(Post.rating == RatingType.QUESTIONABLE)
 
     if filter_ai:
-        posts = posts.filter(Post.ai_generated == False)
-    return paginate(posts)
+        filters.append(Post.ai_generated == False)
+
+    posts = (
+        Select(Post.id, Post.sample_url, Post.preview_url, Post.type)
+        .where(and_(*filters))
+        .order_by(Post.embedding.cosine_distance(vector))
+    )
+    return paginate(db, posts)
 
 
 @router.get(
