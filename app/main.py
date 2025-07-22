@@ -1,13 +1,26 @@
+from alembic.config import Config
+from contextlib import asynccontextmanager
+from alembic import command
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_pagination import add_pagination
 
 from app.config import settings
-from app.db import engine
-from app.models import Base
 from app.routers import auth, comment, post, user, vault, search
 
-app = FastAPI()
+
+def run_migrations():
+    alembic_cfg = Config("alembic.ini")
+    command.upgrade(alembic_cfg, "head")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    run_migrations()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 app.include_router(post.router)
 app.include_router(search.router)
 app.include_router(comment.router)
@@ -24,5 +37,3 @@ app.add_middleware(
 )
 
 add_pagination(app)
-
-Base.metadata.create_all(bind=engine)
