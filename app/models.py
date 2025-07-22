@@ -23,6 +23,7 @@ from app.types import (
     RatingType,
     FileType,
     LayoutType,
+    UserRole,
 )
 
 
@@ -37,6 +38,7 @@ class User(Base):
 
     username = Column(String(30), nullable=False)
     password = Column(String(100), nullable=False)
+    role = Column(Enum(UserRole), nullable=False, default=UserRole.USER)
     comments = relationship("Comment", back_populates="user", lazy="dynamic")
     vaults = relationship("Vault", back_populates="user", lazy="dynamic")
 

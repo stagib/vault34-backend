@@ -19,13 +19,7 @@ from app.models import Post, Reaction, Vault
 from app.schemas.post import PostBase, PostCreate, PostResponse
 from app.schemas.reaction import ReactionBase
 from app.schemas.vault import VaultBaseResponse
-from app.types import (
-    RatingType,
-    TargetType,
-    ReactionType,
-    FileType,
-    PrivacyType,
-)
+import app.types as ta
 from app.utils import update_reaction_count, normalize_text
 from app.utils.auth import get_user, get_search_id
 from app.utils.post import log_post_metric, update_top_vaults
@@ -35,7 +29,14 @@ router = APIRouter(tags=["Post"])
 
 
 @router.post("/posts")
-def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
+def create_post(
+    posts: list[PostCreate],
+    user: dict = Depends(get_user),
+    db: Session = Depends(get_db),
+):
+    if not user or user.role != ta.UserRole.ADMIN:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
     post_objs = []
     """ neo4j_data = [] """
 
@@ -49,13 +50,13 @@ def create_post(posts: list[PostCreate], db: Session = Depends(get_db)):
         if prev_post:
             continue
 
-        rating = RatingType.EXPLICIT
-        if post.rating == RatingType.QUESTIONABLE.value:
-            rating = RatingType.QUESTIONABLE
+        rating = ta.RatingType.EXPLICIT
+        if post.rating == ta.RatingType.QUESTIONABLE.value:
+            rating = ta.RatingType.QUESTIONABLE
 
-        type = FileType.IMAGE
-        if post.type == FileType.VIDEO.value:
-            type = FileType.VIDEO
+        type = ta.FileType.IMAGE
+        if post.type == ta.FileType.VIDEO.value:
+            type = ta.FileType.VIDEO
 
         split_tags = post.tags.split()
         random_tags = split_tags
@@ -129,7 +130,7 @@ def get_post(
 
     if user:
         stmt = Select(Reaction.type).where(
-            Reaction.target_type == TargetType.POST,
+            Reaction.target_type == ta.TargetType.POST,
             Reaction.target_id == post_id,
             Reaction.user_id == user.id,
         )
@@ -173,8 +174,8 @@ def update_post(
 def get_post_recommendation(
     post_id: int,
     query: Annotated[str | None, Query(min_length=1, max_length=50)] = None,
-    type: FileType = None,
-    rating: RatingType = RatingType.EXPLICIT,
+    type: ta.FileType = None,
+    rating: ta.RatingType = ta.RatingType.EXPLICIT,
     filter_ai: bool = False,
     db: Session = Depends(get_db),
 ):
@@ -194,8 +195,8 @@ def get_post_recommendation(
     if type:
         filters.append(Post.type == type)
 
-    if rating == RatingType.QUESTIONABLE:
-        filters.append(Post.rating == RatingType.QUESTIONABLE)
+    if rating == ta.RatingType.QUESTIONABLE:
+        filters.append(Post.rating == ta.RatingType.QUESTIONABLE)
 
     if filter_ai:
         filters.append(Post.ai_generated == False)
@@ -218,7 +219,7 @@ def get_post_vault_recommendation(post_id: int, db: Session = Depends(get_db)):
         ids = [int(id) for id in top_vaults[0]]
         vaults = (
             db.query(Vault)
-            .filter(Vault.id.in_(ids), Vault.privacy == PrivacyType.PUBLIC)
+            .filter(Vault.id.in_(ids), Vault.privacy == ta.PrivacyType.PUBLIC)
             .limit(4)
             .all()
         )
@@ -240,16 +241,16 @@ def react_to_post(
         raise HTTPException(status_code=404, detail="Post not found")
 
     stmt = Select(Reaction).where(
-        Reaction.target_type == TargetType.POST,
+        Reaction.target_type == ta.TargetType.POST,
         Reaction.target_id == post_id,
         Reaction.user_id == user.id,
     )
 
-    prev_reaction = ReactionType.NONE
+    prev_reaction = ta.ReactionType.NONE
     db_reaction = db.execute(stmt).scalar_one_or_none()
     if not db_reaction:
         new_reaction = Reaction(
-            target_type=TargetType.POST,
+            target_type=ta.TargetType.POST,
             target_id=post_id,
             user_id=user.id,
             type=reaction.type,

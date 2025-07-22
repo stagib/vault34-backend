@@ -1,6 +1,11 @@
 from enum import Enum
 
 
+class UserRole(Enum):
+    ADMIN = "admin"
+    USER = "user"
+
+
 class ReactionType(Enum):
     LIKE = "like"
     DISLIKE = "dislike"
