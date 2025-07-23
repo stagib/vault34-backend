@@ -1,26 +1,40 @@
 services:
+    traefik:
+        image: traefik:v3.1
+        command:
+        - --api.insecure=true  
+        - --providers.docker=true
+        - --entrypoints.web.address=:80
+        ports:
+        - "80:80" # HTTP port
+        - "8080:8080"  # Traefik dashboard
+        volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
     api:
         build: .
         container_name: v34_fastapi
-        ports:
-            - "8000:8000"
+        labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.fastapi.rule=Host(`localhost`)"
+        - "traefik.http.routers.fastapi.entrypoints=web"
+        - "traefik.http.services.fastapi.loadbalancer.server.port=8000"
+        restart: always
         env_file:
             - .env
         depends_on:
             - db
-        restart: always
 
     db:
         image: pgvector/pgvector:pg17
         container_name: v34_postgres
+        restart: always
         ports:
-            - "5432:5432"
+        - "5432:5432"
         environment:
             POSTGRES_USER: ${POSTGRES_USER}
             POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
             POSTGRES_DB: ${POSTGRES_DB}
         volumes:
             - postgres_data:/var/lib/postgresql/data
-        restart: always
 volumes:
     postgres_data:
