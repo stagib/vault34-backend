@@ -1,34 +1,27 @@
 from datetime import datetime
 
 from pydantic import BaseModel, Field
-from typing import Optional
 
-from app.schemas.post import PostBase, PostResponse
+from app.schemas.post import PostBase
 from app.schemas.user import UserBase
 from app.types import PrivacyType, ReactionType, LayoutType
 
 
-class VaultPostBase(BaseModel):
+class EntryPreview(BaseModel):
     id: int
     vault_id: int
     index: int
     post: PostBase
 
 
-class EntryResponse(BaseModel):
-    id: int
-    total: int
-    post: PostResponse
-
-
-class VaultBase(BaseModel):
+class VaultCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=100)
     description: str = Field(..., min_length=0, max_length=100)
     privacy: PrivacyType
     layout: LayoutType
 
 
-class VaultBaseResponse(BaseModel):
+class VaultBase(BaseModel):
     id: int
     title: str
     post_count: int
@@ -38,7 +31,6 @@ class VaultBaseResponse(BaseModel):
 
 class VaultResponse(BaseModel):
     id: int
-    date_created: datetime
     title: str
     description: str
     privacy: PrivacyType
@@ -47,6 +39,5 @@ class VaultResponse(BaseModel):
     likes: int
     dislikes: int
     user: UserBase
-    previews: list[str]
     user_reaction: ReactionType = ReactionType.NONE
     last_updated: datetime

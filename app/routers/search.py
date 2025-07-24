@@ -14,7 +14,7 @@ from app.db import get_db
 from app.models import Post, Search, Vault
 from app.schemas.post import PostBase
 from app.schemas.search import SearchBase
-from app.schemas.vault import VaultBaseResponse
+from app.schemas.vault import VaultBase
 from app.types import OrderType, RatingType, FileType, PrivacyType
 from app.utils import normalize_text
 from app.utils.search import log_search_metric, create_post_title_filter
@@ -76,7 +76,7 @@ def search_posts(
         filters.append(Post.type == type)
 
     if filter_ai:
-        filters.append(Post.ai_generated == False)
+        filters.append(Post.ai_generated.is_(False))
 
     if query:
         normalized_query = normalize_text(query)
@@ -106,7 +106,7 @@ def search_posts(
     return paginate(db, posts)
 
 
-@router.get("/vaults", response_model=Page[VaultBaseResponse])
+@router.get("/vaults", response_model=Page[VaultBase])
 def get_vaults(
     query: Annotated[str | None, Query(min_length=1, max_length=50)] = None,
     order: OrderType = OrderType.POPULAR,

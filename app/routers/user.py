@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import User, Vault, Post, Reaction
 from app.schemas.user import UserResponse
-from app.schemas.vault import VaultBaseResponse
+from app.schemas.vault import VaultBase
 from app.schemas.post import PostBase
 from app.types import PrivacyType, ReactionType, TargetType
 from app.utils.auth import verify_token
@@ -24,7 +24,7 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
     return user
 
 
-@router.get("/users/{user_id}/vaults", response_model=Page[VaultBaseResponse])
+@router.get("/users/{user_id}/vaults", response_model=Page[VaultBase])
 def get_user_vaults(
     user_id: int,
     user: dict = Depends(verify_token),
@@ -37,9 +37,7 @@ def get_user_vaults(
     vaults = (
         db.query(Vault)
         .filter(Vault.user_id == query_user.id)
-        .order_by(
-            desc(Vault.score), desc(Vault.post_count), desc(Vault.date_created)
-        )
+        .order_by(desc(Vault.score), desc(Vault.post_count), desc(Vault.date_created))
     )
 
     if not user or user.get("id") != query_user.id:
@@ -67,9 +65,9 @@ def get_user_reaction(
     )
 
     post_ids = [id for (id,) in reactions]
-    posts = db.query(
-        Post.id, Post.sample_url, Post.preview_url, Post.type
-    ).filter(Post.id.in_(post_ids))
+    posts = db.query(Post.id, Post.sample_url, Post.preview_url, Post.type).filter(
+        Post.id.in_(post_ids)
+    )
     return paginate(posts)
 
 

@@ -24,14 +24,10 @@ def verify_auth_token(user: dict = Depends(verify_token)):
 
 
 @router.post("/auth/register")
-def register_user(
-    response: Response, user: UserCreate, db: Session = Depends(get_db)
-):
+def register_user(response: Response, user: UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == user.username).first()
     if db_user:
-        raise HTTPException(
-            status_code=400, detail="Username is already taken"
-        )
+        raise HTTPException(status_code=400, detail="Username is already taken")
 
     hashed_password = hash_password(user.password)
     new_user = User(username=user.username, password=hashed_password)
@@ -44,7 +40,7 @@ def register_user(
             session.execute_write(create_user_, new_user) """
 
         db.commit()
-    except Exception as e:
+    except Exception:
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal error")
 
@@ -68,14 +64,10 @@ def register_user(
 def login(response: Response, user: UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.username == user.username).first()
     if not db_user:
-        raise HTTPException(
-            status_code=404, detail="Username or password is incorrect"
-        )
+        raise HTTPException(status_code=404, detail="Username or password is incorrect")
 
     if not verify_password(db_user.password, user.password):
-        raise HTTPException(
-            status_code=401, detail="Username or password is incorrect"
-        )
+        raise HTTPException(status_code=401, detail="Username or password is incorrect")
 
     time: timedelta = timedelta(hours=12)
     if user.remember_me:

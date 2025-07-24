@@ -11,13 +11,8 @@ from app.db import get_db
 
 """ from app.db.neo4j import * """
 from app.models import Post, Vault, VaultPost, Reaction
-from app.schemas.vault import (
-    VaultBase,
-    VaultPostBase,
-    VaultResponse,
-    VaultBaseResponse,
-)
-from app.schemas.reaction import ReactionBase
+from app.schemas.vault import VaultCreate, EntryPreview, VaultResponse, VaultBase
+from app.schemas.reaction import ReactionCreate
 from app.types import PrivacyType, TargetType, ReactionType
 from app.utils import update_reaction_count
 from app.utils.auth import get_user
@@ -28,7 +23,7 @@ router = APIRouter(tags=["Vault"])
 
 @router.post("/vaults", response_model=VaultResponse)
 def create_vault(
-    vault: VaultBase,
+    vault: VaultCreate,
     user: dict = Depends(get_user),
     db: Session = Depends(get_db),
 ):
@@ -57,7 +52,7 @@ def create_vault(
     return new_vault
 
 
-@router.get("/vaults/recommend", response_model=Page[VaultBaseResponse])
+@router.get("/vaults/recommend", response_model=Page[VaultBase])
 def get_vault_recommendation(db: Session = Depends(get_db)):
     vaults = (
         db.query(Vault)
@@ -94,7 +89,7 @@ def get_vault(
 
 @router.put("/vaults/{vault_id}", response_model=VaultResponse)
 def update_vault(
-    vault: VaultBase,
+    vault: VaultCreate,
     vault_id: int,
     user: dict = Depends(get_user),
     db: Session = Depends(get_db),
@@ -103,9 +98,7 @@ def update_vault(
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     db_vault = (
-        db.query(Vault)
-        .filter(Vault.id == vault_id, Vault.user_id == user.id)
-        .first()
+        db.query(Vault).filter(Vault.id == vault_id, Vault.user_id == user.id).first()
     )
     if not db_vault:
         raise HTTPException(status_code=404, detail="Vault not found")
@@ -135,9 +128,7 @@ def delete_vault(
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     vault = (
-        db.query(Vault)
-        .filter(Vault.id == vault_id, Vault.user_id == user.id)
-        .first()
+        db.query(Vault).filter(Vault.id == vault_id, Vault.user_id == user.id).first()
     )
     if not vault:
         raise HTTPException(status_code=404, detail="Vault not found")
@@ -177,7 +168,7 @@ def update_vault_log(vault_id: int, db: Session = Depends(get_db)):
 
 @router.post("/vaults/{vault_id}/reactions")
 def react_to_vault(
-    reaction: ReactionBase,
+    reaction: ReactionCreate,
     vault_id: int,
     user: dict = Depends(get_user),
     db: Session = Depends(get_db),
@@ -222,9 +213,7 @@ def react_to_vault(
     return {"detail": "reaction added"}
 
 
-@router.get(
-    "/vaults/{vault_id}/posts", response_model=CursorPage[VaultPostBase]
-)
+@router.get("/vaults/{vault_id}/posts", response_model=CursorPage[EntryPreview])
 def get_vault_posts(
     vault_id: int,
     user: dict = Depends(get_user),
@@ -259,9 +248,7 @@ def add_post_to_vault(
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     vault = (
-        db.query(Vault)
-        .filter(Vault.id == vault_id, Vault.user_id == user.id)
-        .first()
+        db.query(Vault).filter(Vault.id == vault_id, Vault.user_id == user.id).first()
     )
     if not vault:
         raise HTTPException(status_code=404, detail="Vault not found")
@@ -296,7 +283,7 @@ def add_post_to_vault(
             session.execute_write(add_post_, vault.id, post.id) """
 
         db.commit()
-    except Exception as e:
+    except Exception:
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal error")
     return {"detail": "Added post to vault"}
@@ -313,9 +300,7 @@ def remove_post_from_vault(
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     vault = (
-        db.query(Vault)
-        .filter(Vault.id == vault_id, Vault.user_id == user.id)
-        .first()
+        db.query(Vault).filter(Vault.id == vault_id, Vault.user_id == user.id).first()
     )
     if not vault:
         raise HTTPException(status_code=404, detail="Vault not found")

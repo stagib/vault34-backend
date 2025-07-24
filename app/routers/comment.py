@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Comment, Post, Reaction
 from app.schemas.comment import CommentCreate, CommentResponse
-from app.schemas.reaction import ReactionBase
+from app.schemas.reaction import ReactionCreate
 from app.types import ReactionType, TargetType
 from app.utils import update_reaction_count
 from app.utils.auth import get_user
@@ -25,9 +25,7 @@ def get_comments(
     if not db_post:
         raise HTTPException(status_code=404, detail="Post not found")
 
-    paginated_comments = paginate(
-        db_post.comments.order_by(desc(Comment.date_created))
-    )
+    paginated_comments = paginate(db_post.comments.order_by(desc(Comment.date_created)))
 
     if user:
         comment_ids = [comment.id for comment in paginated_comments.items]
@@ -41,9 +39,7 @@ def get_comments(
             .all()
         )
 
-        reactions_map = {
-            reaction.target_id: reaction.type for reaction in reactions
-        }
+        reactions_map = {reaction.target_id: reaction.type for reaction in reactions}
         for comment in paginated_comments.items:
             if reactions_map.get(comment.id):
                 comment.user_reaction = reactions_map.get(comment.id)
@@ -65,9 +61,7 @@ def create_comment(
         raise HTTPException(status_code=404, detail="Post not found")
 
     post.comment_count += 1
-    new_comment = Comment(
-        user_id=user.id, post_id=post.id, content=comment.content
-    )
+    new_comment = Comment(user_id=user.id, post_id=post.id, content=comment.content)
 
     try:
         db.add(new_comment)
@@ -114,7 +108,7 @@ def delete_comment(
 def react_to_comment(
     post_id: int,
     comment_id: int,
-    reaction: ReactionBase,
+    reaction: ReactionCreate,
     user: dict = Depends(get_user),
     db: Session = Depends(get_db),
 ):

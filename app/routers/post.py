@@ -17,8 +17,8 @@ from app.db import get_db
 ) """
 from app.models import Post, Reaction, Vault
 from app.schemas.post import PostBase, PostCreate, PostResponse
-from app.schemas.reaction import ReactionBase
-from app.schemas.vault import VaultBaseResponse
+from app.schemas.reaction import ReactionCreate
+from app.schemas.vault import VaultBase
 import app.types as ta
 from app.utils import update_reaction_count, normalize_text
 from app.utils.auth import get_user, get_search_id
@@ -44,9 +44,7 @@ def create_post(
         raise HTTPException(status_code=422, detail="Unprocessable Entity")
 
     for post in posts:
-        prev_post = db.query(
-            exists().where(Post.source_id == post.post_id)
-        ).scalar()
+        prev_post = db.query(exists().where(Post.source_id == post.post_id)).scalar()
         if prev_post:
             continue
 
@@ -112,9 +110,9 @@ def create_post(
 def get_recommendation(
     db: Session = Depends(get_db),
 ):
-    posts = db.query(
-        Post.id, Post.sample_url, Post.preview_url, Post.type
-    ).order_by(desc(Post.week_score))
+    posts = db.query(Post.id, Post.sample_url, Post.preview_url, Post.type).order_by(
+        desc(Post.week_score)
+    )
     return paginate(posts)
 
 
@@ -199,7 +197,7 @@ def get_post_recommendation(
         filters.append(Post.rating == ta.RatingType.QUESTIONABLE)
 
     if filter_ai:
-        filters.append(Post.ai_generated == False)
+        filters.append(Post.ai_generated.is_(False))
 
     posts = (
         Select(Post.id, Post.sample_url, Post.preview_url, Post.type)
@@ -209,9 +207,7 @@ def get_post_recommendation(
     return paginate(db, posts)
 
 
-@router.get(
-    "/posts/{post_id}/recommend/vaults", response_model=list[VaultBaseResponse]
-)
+@router.get("/posts/{post_id}/recommend/vaults", response_model=list[VaultBase])
 def get_post_vault_recommendation(post_id: int, db: Session = Depends(get_db)):
     vaults = []
     top_vaults = db.query(Post.top_vaults).filter(Post.id == post_id).first()
@@ -228,7 +224,7 @@ def get_post_vault_recommendation(post_id: int, db: Session = Depends(get_db)):
 
 @router.post("/posts/{post_id}/reactions")
 def react_to_post(
-    reaction: ReactionBase,
+    reaction: ReactionCreate,
     post_id: int,
     user: dict = Depends(get_user),
     db: Session = Depends(get_db),
