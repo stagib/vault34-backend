@@ -81,7 +81,9 @@ def search_posts(
     if query:
         normalized_query = normalize_text(query)
         title_filters = create_post_title_filter(query)
-        filters.append(*title_filters)
+        for filter in title_filters:
+            filters.append(filter)
+
         search = db.get(Search, normalized_query)
 
         if not search:
@@ -119,8 +121,8 @@ def get_vaults(
     if query:
         normalized_query = normalize_text(query)
         words = normalized_query.split()
-        conditions = [Vault.title.ilike(f"%{word}%") for word in words]
-        filters.append(*conditions)
+        for word in words:
+            filters.append(Vault.title.ilike(f"%{word}%"))
 
     vaults = Select(Vault).where(and_(*filters)).order_by(order_by)
     return paginate(db, vaults)

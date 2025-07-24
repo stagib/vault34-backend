@@ -188,7 +188,8 @@ def get_post_recommendation(
     if query:
         normalized_query = normalize_text(query)
         title_filters = create_post_title_filter(normalized_query)
-        filters.append(*title_filters)
+        for filter in title_filters:
+            filters.append(filter)
 
     if type:
         filters.append(Post.type == type)
