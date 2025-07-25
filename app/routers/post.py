@@ -4,8 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi_pagination.ext.sqlalchemy import paginate
 from fastapi_pagination.cursor import CursorPage
 import numpy
-import random
-from sqlalchemy import desc, Select, exists, and_
+from sqlalchemy import desc, Select, and_
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -16,7 +15,7 @@ from app.db import get_db
     log_search_click_,
 ) """
 from app.models import Post, Reaction, Vault
-from app.schemas.post import PostBase, PostCreate, PostResponse
+from app.schemas.post import PostBase, PostResponse
 from app.schemas.reaction import ReactionCreate
 from app.schemas.vault import VaultBase
 import app.types as ta
@@ -28,7 +27,7 @@ from app.utils.search import create_post_title_filter
 router = APIRouter(tags=["Post"])
 
 
-@router.post("/posts")
+""" @router.post("/posts")
 def create_post(
     posts: list[PostCreate],
     user: dict = Depends(get_user),
@@ -38,7 +37,7 @@ def create_post(
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     post_objs = []
-    """ neo4j_data = [] """
+    neo4j_data = []
 
     if len(posts) > 1000:
         raise HTTPException(status_code=422, detail="Unprocessable Entity")
@@ -88,7 +87,7 @@ def create_post(
     try:
         db.add_all(post_objs)
 
-        """ db.flush()
+        db.flush()
         for post in post_objs:
             data = {
                 "id": post.id,
@@ -97,13 +96,13 @@ def create_post(
             }
             neo4j_data.append(data)
 
-        session.execute_write(create_posts_, neo4j_data)  """
+        session.execute_write(create_posts_, neo4j_data) 
         db.commit()
     except Exception:
         db.rollback()
         raise HTTPException(status_code=500, detail="Internal error")
 
-    return {"detail": "Added posts"}
+    return {"detail": "Added posts"} """
 
 
 @router.get("/posts/recommend", response_model=CursorPage[PostBase])
